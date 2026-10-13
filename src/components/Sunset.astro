@@ -1,0 +1,33 @@
+---
+// 落日：一条地平线，上方偏右一颗橙色小圆，进入页面时用 9 秒缓缓沉到地平线上
+---
+
+<div class="sky" aria-hidden="true">
+  <span class="sun"></span>
+</div>
+
+<style>
+  .sky {
+    position: relative;
+    height: 160px;
+    border-bottom: 1px solid var(--line); /* 地平线 */
+  }
+
+  /* 终态：圆正好落在地平线上 */
+  .sun {
+    position: absolute;
+    right: 18%;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--acc);
+    animation: sink 9s cubic-bezier(0.3, 0, 0.3, 1) both;
+  }
+
+  @keyframes sink {
+    from {
+      transform: translateY(-112px);
+    }
+  }
+</style>

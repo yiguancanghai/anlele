@@ -1,0 +1,79 @@
+---
+// 字：诗、读书笔记、随笔的列表，可按类型筛选
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { firstLine } from '../../scripts/text';
+
+const words = (await getCollection('words', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+const kinds = ['全部', '诗', '读书笔记', '随笔'];
+---
+
+<Base title="字" description="诗、读书笔记、随笔">
+  <section class="wrap section">
+    <h1 class="section-title rise">字</h1>
+    <p class="section-sub rise" style="--i: 1">诗、读书笔记、随笔</p>
+
+    <div class="filter rise" style="--i: 2" role="group" aria-label="按类型筛选">
+      {
+        kinds.map((k) => (
+          <button type="button" data-filter={k} aria-pressed={k === '全部' ? 'true' : 'false'}>
+            {k}
+          </button>
+        ))
+      }
+    </div>
+
+    <ul class="rows rise" style="--i: 2" id="words-list">
+      {
+        words.map((w) => (
+          <li data-kind={w.data.kind}>
+            <a class="row" href={`/words/${w.id}/`}>
+              <span>
+                <span class="row-title">{w.data.title}</span>
+                <span class="row-sub">{w.data.excerpt ?? firstLine(w.body)}</span>
+              </span>
+              <span class="row-meta">{w.data.kind}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<script>
+  // 客户端筛选：隐藏不属于所选类型的行（编号由 CSS 自动重排）
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('button[data-filter]');
+    if (!btn) return;
+    const kind = btn.dataset.filter;
+    document.querySelectorAll<HTMLButtonElement>('button[data-filter]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b === btn));
+    });
+    document.querySelectorAll<HTMLLIElement>('#words-list > li').forEach((li) => {
+      li.hidden = kind !== '全部' && li.dataset.kind !== kind;
+    });
+  });
+</script>
+
+<style>
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    margin: 56px 0 20px;
+  }
+
+  .filter button {
+    min-height: 44px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .filter button:hover,
+  .filter button[aria-pressed='true'] {
+    color: var(--acc);
+  }
+</style>

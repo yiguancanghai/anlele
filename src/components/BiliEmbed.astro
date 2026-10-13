@@ -1,0 +1,63 @@
+---
+// B站嵌入：默认只显示封面（或深色底 + 播放图标），点击后才换成 iframe，不拖慢页面
+interface Props {
+  bvid: string;
+  title: string;
+  cover?: string;
+}
+const { bvid, title, cover } = Astro.props;
+---
+
+<div class="frame">
+  <button type="button" data-bvid={bvid} data-title={title} aria-label={`播放《${title}》`}>
+    {cover && <img src={cover} alt="" loading="lazy" />}
+    <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+      <path d="M18 13 L36 24 L18 35 Z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('button[data-bvid]');
+    if (!btn) return;
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://player.bilibili.com/player.html?bvid=${btn.dataset.bvid}&autoplay=1&high_quality=1`;
+    iframe.title = btn.dataset.title ?? '';
+    iframe.allow = 'autoplay; fullscreen';
+    iframe.allowFullscreen = true;
+    btn.replaceWith(iframe);
+  });
+</script>
+
+<style>
+  .frame {
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--line);
+  }
+
+  button,
+  .frame :global(iframe) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  button {
+    position: relative;
+    color: var(--acc);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  svg {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+</style>

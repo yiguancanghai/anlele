@@ -1,0 +1,97 @@
+---
+// 首页作品目录：所有板块混在一起。服务端按日期输出，客户端加载后洗牌
+// 编号是 CSS 计数器（见 global.css 的 .rows），重排后自动重新编号
+import { getCollection } from 'astro:content';
+
+const live = ({ data }: { data: { draft?: boolean } }) => !data.draft;
+const [words, sounds, frames, build] = await Promise.all([
+  getCollection('words', live),
+  getCollection('sounds', live),
+  getCollection('frames', live),
+  getCollection('build', live),
+]);
+
+// 每行：标题 / 类型小字 / 日期，以及跳去哪里（歌没有 href，点了直接播放）
+const items = [
+  ...words.map((w) => ({ title: w.data.title, kind: w.data.kind, date: w.data.date, href: `/words/${w.id}/` })),
+  ...sounds.map((s) => ({ title: s.data.title, kind: '歌', date: s.data.date, track: s.id })),
+  ...frames.map((f) => ({ title: f.data.title, kind: f.data.kind, date: f.data.date, href: '/frames/' })),
+  ...build.map((b) => ({ title: b.data.title, kind: b.data.featured ? 'App' : '项目', date: b.data.date, href: '/build/' })),
+].sort((a, b) => b.date.getTime() - a.date.getTime());
+---
+
+<div class="head">
+  <p>可以按任意顺序阅读</p>
+  <button type="button" data-shuffle>换一种顺序</button>
+</div>
+
+<ul class="rows" data-work-index>
+  {
+    items.map((item) => {
+      const inner = (
+        <>
+          <span>
+            <span class="row-title">{item.title}</span>
+            <span class="row-sub">{item.kind}</span>
+          </span>
+          <span class="row-meta latin">{item.date.getFullYear()}</span>
+        </>
+      );
+      return (
+        <li>
+          {'track' in item ? (
+            <button type="button" class="row" data-track-id={item.track} aria-pressed="false">
+              {inner}
+            </button>
+          ) : (
+            <a class="row" href={item.href}>
+              {inner}
+            </a>
+          )}
+        </li>
+      );
+    })
+  }
+</ul>
+
+<script>
+  // 洗牌：随机重排列表里的 <li>
+  function shuffle() {
+    const list = document.querySelector('[data-work-index]');
+    if (!list) return;
+    const rows = [...list.children];
+    for (let i = rows.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rows[i], rows[j]] = [rows[j], rows[i]];
+    }
+    list.append(...rows);
+  }
+
+  document.addEventListener('click', (e) => {
+    if ((e.target as Element).closest('[data-shuffle]')) shuffle();
+  });
+
+  // 每次打开首页都洗一次
+  shuffle();
+  document.addEventListener('astro:after-swap', shuffle);
+</script>
+
+<style>
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--mute);
+  }
+
+  .head button {
+    min-height: 44px;
+  }
+
+  .head button:hover {
+    color: var(--acc);
+  }
+</style>

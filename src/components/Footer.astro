@@ -1,0 +1,40 @@
+---
+// 页脚：左边按访客本地时间问候（客户端计算），右边域名
+---
+
+<footer class="wrap">
+  <p id="greeting"></p>
+  <p class="latin">anlele.org</p>
+</footer>
+
+<script>
+  // 0–5 深夜好，5–11 早上好，11–17 午后好，17–20 傍晚好，20–24 晚上好
+  function greet() {
+    const el = document.getElementById('greeting');
+    if (!el) return;
+    const now = new Date();
+    const h = now.getHours();
+    const word = h < 5 ? '深夜好' : h < 11 ? '早上好' : h < 17 ? '午后好' : h < 20 ? '傍晚好' : '晚上好';
+    el.textContent = `${now.getMonth() + 1}月${now.getDate()}日，${word}。`;
+  }
+  // 页面切换后页脚会被替换，所以每次都重新计算
+  document.addEventListener('astro:page-load', greet);
+</script>
+
+<style>
+  footer {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 28px;
+    padding-bottom: 40px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--mute);
+  }
+
+  .latin {
+    font-size: 16px;
+  }
+</style>

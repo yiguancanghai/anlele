@@ -1,0 +1,14 @@
+/* 全站只有这五种颜色和两种字体，改这里即可 */
+:root {
+  --bg: #0c0a08; /* 近黑，夜 */
+  --ink: #e9e0d1; /* 暖米白，正文 */
+  --mute: #8f8577; /* 次要文字、说明 */
+  --line: #262019; /* 分隔线 */
+  --acc: #dd6e2e; /* 陶土橙，落日与黄昏星 */
+
+  --font-zh: 'Noto Serif SC', 'Songti SC', serif;
+  --font-latin: 'Cormorant Garamond', 'Noto Serif SC', serif;
+
+  --wrap: 1080px; /* 内容容器最大宽度 */
+  --pad: 28px; /* 左右内边距 */
+}

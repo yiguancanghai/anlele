@@ -1,0 +1,128 @@
+---
+// 诗的版式：默认竖排，可切换横排；手机宽度下默认横排
+// 切换按钮在页面顶部（带 data-poem-toggle 的按钮），选择记在 localStorage
+interface Props {
+  title: string;
+  year: number;
+}
+const { title, year } = Astro.props;
+---
+
+<div class="poem rise" data-poem>
+  <h1>{title}</h1>
+  <p class="year latin">{year}</p>
+  <div class="body">
+    <div class="text"><slot /></div>
+  </div>
+  <span class="dot" aria-hidden="true"></span>
+</div>
+
+<script>
+  const KEY = 'poem-mode'; // 'v' 竖排 | 'h' 横排
+
+  function stored(): string | null {
+    try {
+      return localStorage.getItem(KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  // 没有记录时：手机横排，其余竖排（与下面 CSS 的断点一致）
+  function current(): string {
+    return stored() ?? (matchMedia('(max-width: 640px)').matches ? 'h' : 'v');
+  }
+
+  function apply(mode: string) {
+    const poem = document.querySelector<HTMLElement>('[data-poem]');
+    const btn = document.querySelector<HTMLElement>('[data-poem-toggle]');
+    if (!poem || !btn) return;
+    poem.dataset.mode = mode;
+    btn.textContent = mode === 'v' ? '横排' : '竖排'; // 按钮显示"可以切换成什么"
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('[data-poem-toggle]')) return;
+    const next = current() === 'v' ? 'h' : 'v';
+    try {
+      localStorage.setItem(KEY, next);
+    } catch {
+      // 存不了也不影响这一次切换
+    }
+    apply(next);
+  });
+
+  apply(current());
+  document.addEventListener('astro:after-swap', () => apply(current()));
+</script>
+
+<style>
+  .poem {
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 22px;
+    letter-spacing: 0.2em;
+    margin-right: -0.2em; /* 抵消最后一个字后面的字间距，保持视觉居中 */
+  }
+
+  .year {
+    margin-top: 4px;
+    color: var(--mute);
+  }
+
+  .body {
+    display: flex;
+    justify-content: center;
+    margin-top: 64px;
+  }
+
+  /* 横排（手机默认） */
+  .text {
+    font-size: 18px;
+    line-height: 2.4;
+    letter-spacing: 0.06em;
+    max-width: 100%;
+  }
+
+  /* 竖排（宽屏默认，或用户选了竖排） */
+  @media (min-width: 641px) {
+    .poem:not([data-mode='h']) .text {
+      writing-mode: vertical-rl;
+      height: 420px;
+      line-height: 2.3;
+      letter-spacing: 0.26em;
+      text-align: start;
+      overflow-x: auto;
+    }
+  }
+
+  .poem[data-mode='v'] .text {
+    writing-mode: vertical-rl;
+    height: 420px;
+    line-height: 2.3;
+    letter-spacing: 0.26em;
+    text-align: start;
+    overflow-x: auto;
+  }
+
+  /* Markdown 里一行就是诗的一行；空行分节 */
+  .text :global(p) {
+    white-space: pre-line;
+  }
+
+  .text :global(p + p) {
+    margin-block-start: 2.3em;
+  }
+
+  /* 结尾的橙色小圆点 */
+  .dot {
+    display: block;
+    width: 5px;
+    height: 5px;
+    margin: 64px auto 0;
+    border-radius: 50%;
+    background: var(--acc);
+  }
+</style>

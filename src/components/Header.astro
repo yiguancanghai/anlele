@@ -1,0 +1,64 @@
+---
+// 页眉：左边 logo，右边五个中文单字导航，当前板块为橙色
+const nav = [
+  { href: '/words/', zh: '字', en: 'Words' },
+  { href: '/sounds/', zh: '声', en: 'Sounds' },
+  { href: '/frames/', zh: '影', en: 'Frames' },
+  { href: '/build/', zh: '造', en: 'Build' },
+  { href: '/about/', zh: '我', en: 'About' },
+];
+const path = Astro.url.pathname;
+---
+
+<header class="wrap">
+  <a class="logo latin" href="/">anlele</a>
+  <nav aria-label="主导航">
+    {
+      nav.map((item) => (
+        <a
+          href={item.href}
+          aria-label={item.en}
+          aria-current={path.startsWith(item.href) ? 'page' : undefined}
+        >
+          {item.zh}
+        </a>
+      ))
+    }
+  </nav>
+</header>
+
+<style>
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .logo {
+    font-size: 24px;
+    line-height: 44px;
+  }
+
+  nav {
+    display: flex;
+    /* 让最后一个字的视觉右边缘对齐容器 */
+    margin-right: -14px;
+  }
+
+  /* 每个字的点击区域 44px */
+  nav a {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    font-size: 15px;
+    color: var(--mute);
+  }
+
+  nav a:hover,
+  nav a[aria-current='page'] {
+    color: var(--acc);
+  }
+</style>

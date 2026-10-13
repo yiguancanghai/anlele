@@ -1,0 +1,53 @@
+---
+// "声"列表里的一行：小圆点 / 歌名 + 说明 / 时长。点击播放，再点暂停
+import { formatTime } from '../scripts/text';
+
+interface Props {
+  id: string;
+  title: string;
+  note: string;
+  duration: number;
+}
+const { id, title, note, duration } = Astro.props;
+---
+
+<button type="button" class="track" data-track-id={id} aria-pressed="false">
+  <span class="dot" aria-hidden="true"></span>
+  <span>
+    <span class="row-title">{title}</span>
+    <span class="row-sub">{note}</span>
+  </span>
+  <span class="row-meta latin">{formatTime(duration)}</span>
+</button>
+
+<style>
+  .track {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+    width: 100%;
+    padding: 22px 0;
+    text-align: left;
+  }
+
+  /* 6px 橙色小圆点：只在悬停或正在播放时显示 */
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--acc);
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: opacity 0.45s ease;
+  }
+
+  .track:hover .dot,
+  .track[aria-pressed='true'] .dot {
+    opacity: 1;
+  }
+
+  .track:hover .row-title {
+    color: var(--acc);
+  }
+</style>
