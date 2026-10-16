@@ -1,14 +1,14 @@
 ---
-// 诗的页面主体：工具栏（返回 / 横排竖排 / 对照 / 重写一遍）+ 单篇视图 + 对照视图
+// 诗的页面主体：工具栏（返回 / 横排竖排 / 对照）+ 单篇视图 + 对照视图
 //   单篇：中文诗宽屏默认竖排（标题是最右边一列，长诗向左排成多列），手机和英文诗默认横排
 //   对照：同一首诗中英都有时可开，左右并排（手机上下），统一横排
-//   字一个一个像墨迹洇开地浮现；点击或按任意键跳过；"重写一遍"重播
+//   整首诗一起缓缓淡入
 import { fade } from 'astro:transitions';
 import Only from './Only.astro';
 import PoemText from './PoemText.astro';
 import type { Work } from '../i18n/content';
 import { getLang, htmlLang, localize, useT, type Lang } from '../i18n/ui';
-import { layoutPoem } from '../scripts/poem';
+import { splitPoem } from '../scripts/poem';
 
 interface Props {
   work: Work<'words'>;
@@ -21,7 +21,7 @@ const textLang = work.contentLang; // 正文实际的语言
 const tag = (l: Lang) => (l === lang ? undefined : htmlLang(l));
 const year = work.data.date.getFullYear();
 
-const single = layoutPoem(work.body);
+const single = splitPoem(work.body);
 // 横排时超过 24 行分两栏，超过 48 行分三栏（只在宽屏）
 const cols = single.lineCount > 48 ? 3 : single.lineCount > 24 ? 2 : 1;
 
@@ -29,27 +29,26 @@ const cols = single.lineCount > 48 ? 3 : single.lineCount > 24 ? 2 : 1;
 const other: Lang = lang === 'zh' ? 'en' : 'zh';
 const facing =
   work.versions.zh && work.versions.en
-    ? ([lang, other] as Lang[]).map((l) => ({ l, ...work.versions[l]!, layout: layoutPoem(work.versions[l]!.body) }))
+    ? ([lang, other] as Lang[]).map((l) => ({ l, ...work.versions[l]!, layout: splitPoem(work.versions[l]!.body) }))
     : undefined;
 ---
 
 <div
-  class="poem play"
+  class="poem"
   data-poem
   data-text-lang={textLang}
   data-facing="false"
   transition:animate={fade({ duration: '0.6s' })}
 >
-  <div class="tools" data-poem-tools>
+  <div class="tools">
     <a href={localize('/words/', lang)}>{t('words.back')}</a>
     <div class="right">
       <button type="button" data-poem-mode>{textLang === 'zh' ? t('poem.toHorizontal') : t('poem.toVertical')}</button>
       {facing && <button type="button" data-poem-facing aria-pressed="false">{t('poem.facing')}</button>}
-      <button type="button" class="rewrite" data-poem-rewrite>{t('poem.rewrite')}</button>
     </div>
   </div>
 
-  <div class="single">
+  <div class="single rise">
     <div class="scroll">
       <div class="flow">
         <div class="head">
@@ -68,7 +67,7 @@ const facing =
 
   {
     facing && (
-      <div class="facing">
+      <div class="facing rise">
         {facing.map((f) => (
           <div class="col" lang={tag(f.l)}>
             <h2>{f.title}</h2>
@@ -113,24 +112,6 @@ const facing =
     poem.querySelector('[data-poem-facing]')?.setAttribute('aria-pressed', poem.dataset.facing!);
   }
 
-  // 从头播放浮现动画
-  function play(poem: HTMLElement) {
-    poem.classList.remove('play', 'done');
-    void poem.offsetWidth; // 让浏览器重新开始动画
-    poem.classList.add('play');
-  }
-
-  // 动画进行中点击或按任意键：所有字立即显示（点工具栏按钮不算）
-  function skip(target: EventTarget | null) {
-    const poem = poemEl();
-    if (!poem) return;
-    if (target instanceof Element && target.closest('[data-poem-tools]')) return;
-    const running = poem
-      .getAnimations({ subtree: true })
-      .some((a) => a.playState === 'running' && (a as CSSAnimation).animationName === 'ink');
-    if (running) poem.classList.add('done');
-  }
-
   document.addEventListener('click', (e) => {
     const poem = poemEl();
     const target = e.target as Element;
@@ -145,15 +126,9 @@ const facing =
       apply(poem);
     } else if (target.closest('[data-poem-facing]')) {
       poem.dataset.facing = poem.dataset.facing === 'true' ? 'false' : 'true';
-      apply(poem);
-      play(poem); // 打开对照时两栏同时重新浮现
-    } else if (target.closest('[data-poem-rewrite]')) {
-      play(poem);
-    } else {
-      skip(target);
+      apply(poem); // 切换后那一栏会重新淡入（.rise 在显示出来时重播）
     }
   });
-  document.addEventListener('keydown', (e) => skip(e.target));
 
   // 换页后（或首次加载）：在显示之前设好横竖排
   function init() {
@@ -198,30 +173,6 @@ const facing =
   .tools button:hover,
   .tools [aria-pressed='true'] {
     color: var(--acc);
-  }
-
-  /* ---------- 逐字浮现：像墨迹洇开 ---------- */
-  .play :global(.ch) {
-    animation: ink 1.2s ease-out both;
-    animation-delay: var(--d);
-  }
-
-  .done :global(.ch) {
-    animation: none;
-  }
-
-  @keyframes ink {
-    from {
-      opacity: 0;
-      filter: blur(6px);
-    }
-  }
-
-  /* 减少动态效果时：不重写，也不显示"重写一遍" */
-  @media (prefers-reduced-motion: reduce) {
-    .rewrite {
-      display: none !important;
-    }
   }
 
   /* ---------- 单篇：横排（手机、英文诗的默认） ---------- */

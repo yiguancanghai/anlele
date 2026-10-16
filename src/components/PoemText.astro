@@ -1,6 +1,5 @@
 ---
-// 一首诗的正文：每节一组，每行一块。每个字（英文是每个单词）是一个 .ch，带着构建时算好的浮现时间
-// 读屏器读每行开头那份完整文字（.sr-only），逐字的部分对读屏器隐藏
+// 一首诗的正文：每节一组，每行一块
 import type { PoemLayout } from '../scripts/poem';
 
 interface Props {
@@ -15,10 +14,7 @@ const { layout, lang } = Astro.props;
     layout.stanzas.map((lines) => (
       <div class="stanza">
         {lines.map((line) => (
-          <span class="line">
-            <span class="sr-only">{line.text}</span>
-            <span aria-hidden="true">{line.tokens.map((t) => (t.delay === undefined ? t.text : <span class="ch" style={`--d:${t.delay}ms`}>{t.text}</span>))}</span>
-          </span>
+          <span class="line">{line}</span>
         ))}
       </div>
     ))
@@ -28,11 +24,6 @@ const { layout, lang } = Astro.props;
 <style>
   .line {
     display: block;
-  }
-
-  /* 复制时只复制看得见的那份，不重复 */
-  .line > .sr-only {
-    user-select: none;
   }
 
   .stanza + .stanza {
