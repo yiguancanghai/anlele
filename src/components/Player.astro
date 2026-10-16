@@ -1,26 +1,28 @@
 ---
 // 全局播放器：固定在页面底部，第一次点歌之前不显示
-// transition:persist 让它在切换页面时原样保留；状态逻辑在 src/scripts/player.ts
-import { getCollection } from 'astro:content';
+// transition:persist 让它在切换页面（包括切换语言）时原样保留；状态逻辑在 src/scripts/player.ts
+// 因为切换语言时它不会重新渲染，按钮文字由 player.ts 按页面语言设置
+import { getWorks } from '../i18n/content';
+import { getLang, useT } from '../i18n/ui';
 
-const tracks = (await getCollection('sounds', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
-  .map((s) => ({
-    id: s.id,
-    title: s.data.title,
-    audio: s.data.audio,
-    duration: s.data.duration,
-    cover: s.data.cover,
-  }));
+const t = useT(getLang(Astro.currentLocale));
+const [zh, en] = await Promise.all([getWorks('sounds', 'zh'), getWorks('sounds', 'en')]);
+const tracks = zh.map((s) => ({
+  id: s.id,
+  title: { zh: s.data.title, en: en.find((e) => e.id === s.id)?.data.title ?? s.data.title },
+  audio: s.data.audio,
+  duration: s.data.duration,
+  cover: s.data.cover,
+}));
 ---
 
-<div id="player" data-tracks={JSON.stringify(tracks)} role="region" aria-label="播放器" hidden transition:persist>
+<div id="player" data-tracks={JSON.stringify(tracks)} role="region" aria-label={t('player.label')} hidden transition:persist>
   <div class="progress">
     <div class="fill" data-player-fill></div>
-    <input type="range" min="0" max="1000" value="0" aria-label="播放进度" data-player-seek />
+    <input type="range" min="0" max="1000" value="0" aria-label={t('player.seek')} data-player-seek />
   </div>
   <div class="wrap bar">
-    <button type="button" class="toggle" aria-label="播放" data-player-toggle>
+    <button type="button" class="toggle" aria-label={t('player.play')} data-player-toggle>
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path class="icon-play" d="M8 5 L19 12 L8 19 Z"></path>
         <path class="icon-pause" d="M8 5 V19 M16 5 V19"></path>
@@ -28,7 +30,7 @@ const tracks = (await getCollection('sounds', ({ data }) => !data.draft))
     </button>
     <p class="title" data-player-title></p>
     <p class="time latin" data-player-time></p>
-    <button type="button" class="next" data-player-next>下一首</button>
+    <button type="button" class="next" data-player-next>{t('player.next')}</button>
   </div>
 </div>
 

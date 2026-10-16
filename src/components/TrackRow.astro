@@ -1,5 +1,6 @@
 ---
 // "声"列表里的一行：小圆点 / 歌名 + 说明 / 时长。点击播放，再点暂停
+import Only from './Only.astro';
 import { formatTime } from '../scripts/text';
 
 interface Props {
@@ -7,14 +8,16 @@ interface Props {
   title: string;
   note: string;
   duration: number;
+  missing?: boolean; // 当前语言没有这首歌的版本
+  lang?: string; // 文字实际的语言（和页面不同时设置）
 }
-const { id, title, note, duration } = Astro.props;
+const { id, title, note, duration, missing, lang } = Astro.props;
 ---
 
 <button type="button" class="track" data-track-id={id} aria-pressed="false">
   <span class="dot" aria-hidden="true"></span>
-  <span>
-    <span class="row-title">{title}</span>
+  <span lang={lang}>
+    <span class="row-title">{title}{missing && <Only />}</span>
     <span class="row-sub">{note}</span>
   </span>
   <span class="row-meta latin">{formatTime(duration)}</span>

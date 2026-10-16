@@ -1,0 +1,63 @@
+---
+// 深浅模式切换：页眉里那颗落日。深色时是实心圆，浅色时是空心圆
+// 页面加载前的主题设置在 Base.astro 的内联脚本里（防闪烁）
+---
+
+<button type="button" class="theme" data-theme-toggle aria-label="切换到浅色" aria-pressed="false">
+  <span class="sun" aria-hidden="true"></span>
+</button>
+
+<script>
+  import { ui } from '../i18n/ui';
+
+  // 同步按钮的文字说明和按下状态（按页面语言）
+  function sync() {
+    const root = document.documentElement;
+    const light = root.dataset.theme === 'light';
+    const dict = ui[root.lang === 'en' ? 'en' : 'zh'];
+    document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+      btn.setAttribute('aria-label', light ? dict['theme.toDark'] : dict['theme.toLight']);
+      btn.setAttribute('aria-pressed', String(light));
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('[data-theme-toggle]')) return;
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+    root.classList.add('theme-fade');
+    window.anleleSetTheme?.(next);
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      // 存不了也不影响这一次切换
+    }
+    sync();
+    setTimeout(() => root.classList.remove('theme-fade'), 700);
+  });
+
+  sync();
+  document.addEventListener('astro:page-load', sync);
+</script>
+
+<style>
+  .theme {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+  }
+
+  .sun {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid var(--acc);
+    background: var(--acc);
+    transition: background-color 0.4s ease;
+  }
+
+  :global(:root[data-theme='light']) .sun {
+    background: transparent;
+  }
+</style>

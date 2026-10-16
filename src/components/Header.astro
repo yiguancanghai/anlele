@@ -1,58 +1,69 @@
 ---
-// 页眉：左边 logo，右边五个中文单字导航，当前板块为橙色
-const nav = [
-  { href: '/words/', zh: '字', en: 'Words' },
-  { href: '/sounds/', zh: '声', en: 'Sounds' },
-  { href: '/frames/', zh: '影', en: 'Frames' },
-  { href: '/build/', zh: '造', en: 'Build' },
-  { href: '/about/', zh: '我', en: 'About' },
-];
+// 页眉：左边 logo；中间导航（中文是单字，英文是单词，当前板块为橙色）；右边语言和深浅模式切换
+// 手机宽度下分两行：第一行 logo + 两个切换，第二行导航
+import LangToggle from './LangToggle.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import { getLang, localize, ui, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const sections = ['words', 'sounds', 'frames', 'build', 'about'] as const;
+const nav = sections.map((s) => ({
+  href: localize(`/${s}/`, lang),
+  text: t(`nav.${s}`),
+  // 中文单字旁边给读屏器一个英文名
+  label: lang === 'zh' ? ui.en[`nav.${s}`] : undefined,
+}));
 const path = Astro.url.pathname;
 ---
 
-<header class="wrap">
-  <a class="logo latin" href="/">anlele</a>
-  <nav aria-label="主导航">
+<header class="wrap" data-lang={lang}>
+  <a class="logo latin" href={localize('/', lang)}>anlele</a>
+  <nav aria-label={t('nav.label')}>
     {
       nav.map((item) => (
-        <a
-          href={item.href}
-          aria-label={item.en}
-          aria-current={path.startsWith(item.href) ? 'page' : undefined}
-        >
-          {item.zh}
+        <a href={item.href} aria-label={item.label} aria-current={path.startsWith(item.href) ? 'page' : undefined}>
+          {item.text}
         </a>
       ))
     }
   </nav>
+  <div class="tools">
+    <LangToggle />
+    <ThemeToggle />
+  </div>
 </header>
 
 <style>
   header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas: 'logo nav tools';
     align-items: center;
-    justify-content: space-between;
+    column-gap: 20px;
     padding-top: 20px;
     padding-bottom: 20px;
   }
 
   .logo {
+    grid-area: logo;
+    justify-self: start;
     font-size: 24px;
     line-height: 44px;
   }
 
   nav {
+    grid-area: nav;
     display: flex;
-    /* 让最后一个字的视觉右边缘对齐容器 */
-    margin-right: -14px;
   }
 
-  /* 每个字的点击区域 44px */
+  /* 每一项的点击区域至少 44px */
   nav a {
     display: grid;
     place-items: center;
-    width: 44px;
+    min-width: 44px;
     height: 44px;
+    padding: 0 6px;
     font-size: 15px;
     color: var(--mute);
   }
@@ -60,5 +71,34 @@ const path = Astro.url.pathname;
   nav a:hover,
   nav a[aria-current='page'] {
     color: var(--acc);
+  }
+
+  .tools {
+    grid-area: tools;
+    display: flex;
+    align-items: center;
+    /* 让落日按钮的圆心视觉上贴近容器右边缘 */
+    margin-right: -16px;
+  }
+
+  /* 手机：两行 */
+  @media (max-width: 640px) {
+    header {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        'logo tools'
+        'nav nav';
+      row-gap: 4px;
+    }
+
+    nav {
+      justify-content: space-between;
+      /* 抵消第一项和最后一项的内边距，让文字和页面左右边缘对齐 */
+      margin: 0 -14px;
+    }
+
+    header[data-lang='en'] nav {
+      margin: 0 -10px;
+    }
   }
 </style>

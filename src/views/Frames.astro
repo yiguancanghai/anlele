@@ -1,0 +1,90 @@
+---
+// 影：短片纵向排列。以后加"摄影"时，按 kind 再分一栏即可（中英共用）
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import BiliEmbed from '../components/BiliEmbed.astro';
+import Only from '../components/Only.astro';
+import { getWorks } from '../i18n/content';
+import { getLang, htmlLang, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const all = await getWorks('frames', lang);
+const films = await Promise.all(
+  all
+    .filter((f) => f.data.kind === '短片')
+    .map(async (f) => ({
+      ...f.data,
+      missing: f.missing,
+      textLang: f.contentLang === lang ? undefined : htmlLang(f.contentLang),
+      Content: (await render(f.entry)).Content,
+    })),
+);
+---
+
+<Base title={t('nav.frames')} description={t('frames.sub')}>
+  <section class="wrap section">
+    <h1 class="section-title rise">{t('nav.frames')}</h1>
+    <p class="section-sub rise" style="--i: 1">{t('frames.sub')}</p>
+
+    <div class="films rise" style="--i: 2">
+      {
+        films.map((f) => (
+          <article>
+            {f.bvid && (
+              <BiliEmbed
+                bvid={f.bvid}
+                title={f.title}
+                cover={f.cover}
+                label={lang === 'zh' ? `${t('frames.play')}《${f.title}》` : `${t('frames.play')} ${f.title}`}
+              />
+            )}
+            <div class="head">
+              <h2>
+                <span lang={f.textLang}>{f.title}</span>
+                {f.missing && <Only />}
+              </h2>
+              <p class="latin">{[f.duration, f.date.getFullYear()].filter(Boolean).join(' · ')}</p>
+            </div>
+            <div class="intro" lang={f.textLang}>
+              <f.Content />
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .films {
+    display: grid;
+    gap: 96px;
+    max-width: 880px;
+    margin-top: 72px;
+  }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .head .latin {
+    color: var(--mute);
+    white-space: nowrap;
+  }
+
+  .intro {
+    max-width: 560px;
+    margin-top: 8px;
+    font-size: 15px;
+    color: var(--mute);
+  }
+</style>

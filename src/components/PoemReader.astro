@@ -1,128 +1,451 @@
 ---
-// 诗的版式：默认竖排，可切换横排；手机宽度下默认横排
-// 切换按钮在页面顶部（带 data-poem-toggle 的按钮），选择记在 localStorage
+// 诗的页面主体：工具栏（返回 / 横排竖排 / 对照 / 重写一遍）+ 单篇视图 + 对照视图
+//   单篇：中文诗宽屏默认竖排（标题是最右边一列，长诗向左排成多列），手机和英文诗默认横排
+//   对照：同一首诗中英都有时可开，左右并排（手机上下），统一横排
+//   字一个一个像墨迹洇开地浮现；点击或按任意键跳过；"重写一遍"重播
+import { fade } from 'astro:transitions';
+import Only from './Only.astro';
+import PoemText from './PoemText.astro';
+import type { Work } from '../i18n/content';
+import { getLang, htmlLang, localize, useT, type Lang } from '../i18n/ui';
+import { layoutPoem } from '../scripts/poem';
+
 interface Props {
-  title: string;
-  year: number;
+  work: Work<'words'>;
 }
-const { title, year } = Astro.props;
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const { work } = Astro.props;
+const textLang = work.contentLang; // 正文实际的语言
+const tag = (l: Lang) => (l === lang ? undefined : htmlLang(l));
+const year = work.data.date.getFullYear();
+
+const single = layoutPoem(work.body);
+// 横排时超过 24 行分两栏，超过 48 行分三栏（只在宽屏）
+const cols = single.lineCount > 48 ? 3 : single.lineCount > 24 ? 2 : 1;
+
+// 对照：左边是页面语言的版本，右边是另一种
+const other: Lang = lang === 'zh' ? 'en' : 'zh';
+const facing =
+  work.versions.zh && work.versions.en
+    ? ([lang, other] as Lang[]).map((l) => ({ l, ...work.versions[l]!, layout: layoutPoem(work.versions[l]!.body) }))
+    : undefined;
 ---
 
-<div class="poem rise" data-poem>
-  <h1>{title}</h1>
-  <p class="year latin">{year}</p>
-  <div class="body">
-    <div class="text"><slot /></div>
+<div
+  class="poem play"
+  data-poem
+  data-text-lang={textLang}
+  data-facing="false"
+  transition:animate={fade({ duration: '0.6s' })}
+>
+  <div class="tools" data-poem-tools>
+    <a href={localize('/words/', lang)}>{t('words.back')}</a>
+    <div class="right">
+      <button type="button" data-poem-mode>{textLang === 'zh' ? t('poem.toHorizontal') : t('poem.toVertical')}</button>
+      {facing && <button type="button" data-poem-facing aria-pressed="false">{t('poem.facing')}</button>}
+      <button type="button" class="rewrite" data-poem-rewrite>{t('poem.rewrite')}</button>
+    </div>
   </div>
-  <span class="dot" aria-hidden="true"></span>
+
+  <div class="single">
+    <div class="scroll">
+      <div class="flow">
+        <div class="head">
+          <h1 lang={tag(textLang)}>{work.data.title}</h1>
+          <span class="year latin">{year}</span>
+          {work.missing && <Only />}
+        </div>
+        <div class="body" data-cols={cols}>
+          <PoemText layout={single} lang={tag(textLang)} />
+        </div>
+        <span class="dot" aria-hidden="true"></span>
+        {work.data.translator && <p class="translator">{work.data.translator}</p>}
+      </div>
+    </div>
+  </div>
+
+  {
+    facing && (
+      <div class="facing">
+        {facing.map((f) => (
+          <div class="col" lang={tag(f.l)}>
+            <h2>{f.title}</h2>
+            <PoemText layout={f.layout} />
+            {f.translator && <p class="translator">{f.translator}</p>}
+          </div>
+        ))}
+      </div>
+    )
+  }
 </div>
 
 <script>
-  const KEY = 'poem-mode'; // 'v' 竖排 | 'h' 横排
+  import { ui } from '../i18n/ui';
 
-  function stored(): string | null {
+  type Mode = 'v' | 'h';
+
+  const poemEl = () => document.querySelector<HTMLElement>('[data-poem]');
+  const dict = () => ui[document.documentElement.lang === 'en' ? 'en' : 'zh'];
+  // 中文诗和英文诗分开记横竖排的选择
+  const key = (poem: HTMLElement) => (poem.dataset.textLang === 'en' ? 'poem-mode-en' : 'poem-mode');
+
+  function stored(poem: HTMLElement): Mode | null {
     try {
-      return localStorage.getItem(KEY);
+      const v = localStorage.getItem(key(poem));
+      return v === 'v' || v === 'h' ? v : null;
     } catch {
       return null;
     }
   }
 
-  // 没有记录时：手机横排，其余竖排（与下面 CSS 的断点一致）
-  function current(): string {
-    return stored() ?? (matchMedia('(max-width: 640px)').matches ? 'h' : 'v');
+  // 没有记录时：英文诗横排；中文诗手机横排、宽屏竖排（与 CSS 断点一致）
+  function mode(poem: HTMLElement): Mode {
+    return stored(poem) ?? (poem.dataset.textLang === 'en' || matchMedia('(max-width: 640px)').matches ? 'h' : 'v');
   }
 
-  function apply(mode: string) {
-    const poem = document.querySelector<HTMLElement>('[data-poem]');
-    const btn = document.querySelector<HTMLElement>('[data-poem-toggle]');
-    if (!poem || !btn) return;
-    poem.dataset.mode = mode;
-    btn.textContent = mode === 'v' ? '横排' : '竖排'; // 按钮显示"可以切换成什么"
+  function apply(poem: HTMLElement) {
+    const m = mode(poem);
+    poem.dataset.mode = m;
+    const btn = poem.querySelector('[data-poem-mode]');
+    if (btn) btn.textContent = m === 'v' ? dict()['poem.toHorizontal'] : dict()['poem.toVertical'];
+    poem.querySelector('[data-poem-facing]')?.setAttribute('aria-pressed', poem.dataset.facing!);
+  }
+
+  // 从头播放浮现动画
+  function play(poem: HTMLElement) {
+    poem.classList.remove('play', 'done');
+    void poem.offsetWidth; // 让浏览器重新开始动画
+    poem.classList.add('play');
+  }
+
+  // 动画进行中点击或按任意键：所有字立即显示（点工具栏按钮不算）
+  function skip(target: EventTarget | null) {
+    const poem = poemEl();
+    if (!poem) return;
+    if (target instanceof Element && target.closest('[data-poem-tools]')) return;
+    const running = poem
+      .getAnimations({ subtree: true })
+      .some((a) => a.playState === 'running' && (a as CSSAnimation).animationName === 'ink');
+    if (running) poem.classList.add('done');
   }
 
   document.addEventListener('click', (e) => {
-    if (!(e.target as Element).closest('[data-poem-toggle]')) return;
-    const next = current() === 'v' ? 'h' : 'v';
-    try {
-      localStorage.setItem(KEY, next);
-    } catch {
-      // 存不了也不影响这一次切换
+    const poem = poemEl();
+    const target = e.target as Element;
+    if (!poem) return;
+    if (target.closest('[data-poem-mode]')) {
+      const next: Mode = mode(poem) === 'v' ? 'h' : 'v';
+      try {
+        localStorage.setItem(key(poem), next);
+      } catch {
+        // 存不了也不影响这一次切换
+      }
+      apply(poem);
+    } else if (target.closest('[data-poem-facing]')) {
+      poem.dataset.facing = poem.dataset.facing === 'true' ? 'false' : 'true';
+      apply(poem);
+      play(poem); // 打开对照时两栏同时重新浮现
+    } else if (target.closest('[data-poem-rewrite]')) {
+      play(poem);
+    } else {
+      skip(target);
     }
-    apply(next);
   });
+  document.addEventListener('keydown', (e) => skip(e.target));
 
-  apply(current());
-  document.addEventListener('astro:after-swap', () => apply(current()));
+  // 换页后（或首次加载）：在显示之前设好横竖排
+  function init() {
+    const poem = poemEl();
+    if (poem) apply(poem);
+  }
+  init();
+  document.addEventListener('astro:after-swap', init);
 </script>
 
 <style>
   .poem {
+    --poem-h: max(320px, calc(100svh - 300px)); /* 竖排时诗的高度：撑满一屏，减去页眉、工具栏、播放器 */
+  }
+
+  /* 工具栏：一行细细的小字 */
+  .tools {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .tools .right {
+    display: flex;
+    gap: 4px 20px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .tools a,
+  .tools button {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .tools a:hover,
+  .tools button:hover,
+  .tools [aria-pressed='true'] {
+    color: var(--acc);
+  }
+
+  /* ---------- 逐字浮现：像墨迹洇开 ---------- */
+  .play :global(.ch) {
+    animation: ink 1.2s ease-out both;
+    animation-delay: var(--d);
+  }
+
+  .done :global(.ch) {
+    animation: none;
+  }
+
+  @keyframes ink {
+    from {
+      opacity: 0;
+      filter: blur(6px);
+    }
+  }
+
+  /* 减少动态效果时：不重写，也不显示"重写一遍" */
+  @media (prefers-reduced-motion: reduce) {
+    .rewrite {
+      display: none !important;
+    }
+  }
+
+  /* ---------- 单篇：横排（手机、英文诗的默认） ---------- */
+  .head {
     text-align: center;
   }
 
   h1 {
+    display: block;
     font-size: 22px;
     letter-spacing: 0.2em;
     margin-right: -0.2em; /* 抵消最后一个字后面的字间距，保持视觉居中 */
   }
 
   .year {
-    margin-top: 4px;
+    display: block;
+    margin-top: 2px;
+    font-size: 16px;
     color: var(--mute);
   }
 
   .body {
-    display: flex;
-    justify-content: center;
-    margin-top: 64px;
-  }
-
-  /* 横排（手机默认） */
-  .text {
+    margin-top: 40px;
     font-size: 18px;
-    line-height: 2.4;
-    letter-spacing: 0.06em;
-    max-width: 100%;
+    line-height: 2;
+    letter-spacing: 0.04em;
+    text-align: center;
   }
 
-  /* 竖排（宽屏默认，或用户选了竖排） */
+  /* 长诗在宽屏横排时分栏，每节不拆开 */
   @media (min-width: 641px) {
-    .poem:not([data-mode='h']) .text {
-      writing-mode: vertical-rl;
-      height: 420px;
-      line-height: 2.3;
-      letter-spacing: 0.26em;
-      text-align: start;
-      overflow-x: auto;
+    .body[data-cols='2'],
+    .body[data-cols='3'] {
+      column-gap: 64px;
+      column-rule: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .body[data-cols='2'] {
+      columns: 2;
+    }
+
+    .body[data-cols='3'] {
+      columns: 3;
     }
   }
 
-  .poem[data-mode='v'] .text {
-    writing-mode: vertical-rl;
-    height: 420px;
-    line-height: 2.3;
-    letter-spacing: 0.26em;
-    text-align: start;
-    overflow-x: auto;
+  .body :global(.stanza) {
+    break-inside: avoid;
   }
 
-  /* Markdown 里一行就是诗的一行；空行分节 */
-  .text :global(p) {
-    white-space: pre-line;
+  .translator {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--mute);
+    text-align: center;
   }
 
-  .text :global(p + p) {
-    margin-block-start: 2.3em;
-  }
-
-  /* 结尾的橙色小圆点 */
   .dot {
     display: block;
     width: 5px;
     height: 5px;
-    margin: 64px auto 0;
+    margin: 48px auto 0;
     border-radius: 50%;
     background: var(--acc);
+  }
+
+  /* ---------- 单篇：竖排（中文诗宽屏默认，或手动选了竖排） ---------- */
+  /* 写两遍：一遍是"没手动选、宽屏、中文诗"，一遍是"手动选了竖排" */
+  @media (min-width: 641px) {
+    .poem[data-text-lang='zh']:not([data-mode='h']) .scroll {
+      direction: rtl; /* 横向滚动从右边（诗的开头）开始 */
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) .flow {
+      direction: ltr;
+      writing-mode: vertical-rl;
+      width: max-content;
+      height: var(--poem-h);
+      margin: 0 auto; /* 短诗居中，长诗向左延伸 */
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) .head {
+      text-align: start;
+      margin-left: 2.4em;
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) h1 {
+      display: inline;
+      margin: 0;
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) .year {
+      display: inline;
+      margin: 0;
+      padding-top: 1.2em;
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) .body {
+      margin: 0;
+      font-size: 19px;
+      line-height: 2;
+      letter-spacing: 0.18em;
+      text-align: start;
+    }
+
+    .poem[data-text-lang='zh']:not([data-mode='h']) .dot {
+      margin: 0 3em 0 0;
+    }
+  }
+
+  .poem[data-mode='v'] .scroll {
+    direction: rtl;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+
+  .poem[data-mode='v'] .flow {
+    direction: ltr;
+    writing-mode: vertical-rl;
+    width: max-content;
+    height: var(--poem-h);
+    margin: 0 auto;
+  }
+
+  .poem[data-mode='v'] .head {
+    text-align: start;
+    margin-left: 2.4em;
+  }
+
+  .poem[data-mode='v'] h1 {
+    display: inline;
+    margin: 0;
+  }
+
+  .poem[data-mode='v'] .year {
+    display: inline;
+    margin: 0;
+    padding-top: 1.2em;
+  }
+
+  .poem[data-mode='v'] .body {
+    margin: 0;
+    font-size: 19px;
+    line-height: 2;
+    letter-spacing: 0.18em;
+    text-align: start;
+  }
+
+  .poem[data-mode='v'] .dot {
+    margin: 0 3em 0 0;
+  }
+
+  /* 竖排时不分栏（长诗自然向左排成多列） */
+  .poem[data-mode='v'] .body,
+  .poem[data-text-lang='zh']:not([data-mode='h']) .body {
+    columns: auto;
+  }
+
+  /* ---------- 对照 ---------- */
+  .facing {
+    display: none;
+  }
+
+  .poem[data-facing='true'] .single {
+    display: none;
+  }
+
+  .poem[data-facing='true'] .facing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* 对照时横竖排按钮没有意义 */
+  .poem[data-facing='true'] [data-poem-mode] {
+    display: none;
+  }
+
+  .col {
+    padding: 0 48px;
+    font-size: 18px;
+    line-height: 2;
+  }
+
+  .col:first-child {
+    padding-left: 0;
+  }
+
+  .col + .col {
+    padding-right: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .col h2 {
+    margin-bottom: 32px;
+    font-size: 20px;
+    letter-spacing: 0.1em;
+  }
+
+  .col .translator {
+    text-align: left;
+  }
+
+  @media (max-width: 640px) {
+    .poem[data-facing='true'] .facing {
+      grid-template-columns: 1fr;
+    }
+
+    .col,
+    .col:first-child {
+      padding: 0;
+    }
+
+    .col + .col {
+      margin-top: 48px;
+      padding-top: 48px;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
   }
 </style>

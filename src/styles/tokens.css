@@ -1,14 +1,41 @@
-/* 全站只有这五种颜色和两种字体，改这里即可 */
+/* 全站颜色和字体，改这里即可。颜色分深浅两套，由 <html data-theme> 决定 */
 :root {
-  --bg: #0c0a08; /* 近黑，夜 */
-  --ink: #e9e0d1; /* 暖米白，正文 */
-  --mute: #8f8577; /* 次要文字、说明 */
-  --line: #262019; /* 分隔线 */
-  --acc: #dd6e2e; /* 陶土橙，落日与黄昏星 */
-
   --font-zh: 'Noto Serif SC', 'Songti SC', serif;
   --font-latin: 'Cormorant Garamond', 'Noto Serif SC', serif;
 
   --wrap: 1080px; /* 内容容器最大宽度 */
   --pad: 28px; /* 左右内边距 */
+}
+
+/* 深色：夜（默认） */
+:root,
+:root[data-theme='dark'] {
+  --bg: #0c0a08; /* 近黑 */
+  --ink: #e9e0d1; /* 暖米白，正文 */
+  --mute: #8f8577; /* 次要文字、说明 */
+  --line: #262019; /* 分隔线 */
+  --acc: #dd6e2e; /* 陶土橙，落日与黄昏星 */
+  color-scheme: dark;
+}
+
+/* 浅色：纸 */
+:root[data-theme='light'] {
+  --bg: #f2ece2; /* 暖白纸色 */
+  --ink: #1c1712; /* 墨色 */
+  --mute: #6e6457;
+  --line: #ddd3c4;
+  --acc: #a8461a; /* 加深的陶土橙，浅底上对比度 ≥ 4.5:1 */
+  color-scheme: light;
+}
+
+/* 脚本没运行时（极少见）也跟随系统 */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f2ece2;
+    --ink: #1c1712;
+    --mute: #6e6457;
+    --line: #ddd3c4;
+    --acc: #a8461a;
+    color-scheme: light;
+  }
 }

@@ -3,13 +3,14 @@
 interface Props {
   bvid: string;
   title: string;
+  label: string; // 播放按钮给读屏器的说明，如"播放《短片名》"
   cover?: string;
 }
-const { bvid, title, cover } = Astro.props;
+const { bvid, title, label, cover } = Astro.props;
 ---
 
 <div class="frame">
-  <button type="button" data-bvid={bvid} data-title={title} aria-label={`播放《${title}》`}>
+  <button type="button" data-bvid={bvid} data-title={title} aria-label={label}>
     {cover && <img src={cover} alt="" loading="lazy" />}
     <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
       <path d="M18 13 L36 24 L18 35 Z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"></path>

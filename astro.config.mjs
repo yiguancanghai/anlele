@@ -5,5 +5,15 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: 'https://anlele.org',
   output: 'static',
-  integrations: [sitemap()],
+  // 中文是默认语言、没有前缀；英文在 /en/ 下。不根据浏览器语言自动跳转
+  i18n: {
+    defaultLocale: 'zh',
+    locales: ['zh', 'en'],
+    routing: { prefixDefaultLocale: false, redirectToDefaultLocale: false },
+  },
+  integrations: [
+    sitemap({
+      i18n: { defaultLocale: 'zh', locales: { zh: 'zh-CN', en: 'en' } },
+    }),
+  ],
 });

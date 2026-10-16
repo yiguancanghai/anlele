@@ -1,0 +1,122 @@
+---
+// 首页：落日 / 门口的一句诗 / 此刻 / 作品目录（中英共用）
+import Base from '../layouts/Base.astro';
+import Sunset from '../components/Sunset.astro';
+import WorkIndex from '../components/WorkIndex.astro';
+import { epigraph } from '../data/site';
+import { getLang, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const poem = epigraph[lang];
+
+// "此刻"：中文 now.md，英文 now.en.md（可选，没有就显示中文）
+const nows = import.meta.glob<{ Content: any }>('../content/now*.md', { eager: true });
+const nowEn = nows['../content/now.en.md'];
+const Now = (lang === 'en' && nowEn ? nowEn : nows['../content/now.md']).Content;
+const nowLang = lang === 'en' && !nowEn ? 'zh-CN' : undefined;
+---
+
+<Base>
+  <div class="wrap home">
+    <h1 class="sr-only">anlele</h1>
+
+    {
+      lang === 'zh' && (
+        <p class="read-en" lang="en" data-read-en hidden>
+          <a href="/en/">Read in English →</a>
+        </p>
+      )
+    }
+
+    <Sunset />
+
+    <div class="epigraph">
+      {poem.lines.map((line, i) => <p class="rise" style={`--i: ${i}`}>{line}</p>)}
+      <p class="source rise" style={`--i: ${poem.lines.length}`}>
+        — {lang === 'zh' ? `《${poem.source}》` : <i>{poem.source}</i>}
+      </p>
+    </div>
+
+    <section class="now rise" style="--i: 3">
+      <h2 class="latin">{t('home.now')}</h2>
+      <div lang={nowLang}><Now /></div>
+    </section>
+
+    <section class="index rise" style="--i: 4">
+      <WorkIndex />
+    </section>
+  </div>
+</Base>
+
+<script>
+  // 上次选过英文的人，进中文首页时在顶部提示一行（不自动跳转）
+  function hint() {
+    const el = document.querySelector<HTMLElement>('[data-read-en]');
+    if (!el) return;
+    try {
+      el.hidden = localStorage.getItem('lang') !== 'en';
+    } catch {
+      // 读不到就不提示
+    }
+  }
+  document.addEventListener('astro:page-load', hint);
+</script>
+
+<style>
+  .read-en {
+    margin-top: 8px;
+    font-size: 15px;
+    color: var(--mute);
+  }
+
+  .read-en a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .read-en a:hover {
+    color: var(--acc);
+  }
+
+  .home {
+    padding-bottom: 120px;
+  }
+
+  /* 门口的一句诗 */
+  .epigraph {
+    margin-top: 72px;
+  }
+
+  .epigraph p {
+    font-size: 30px;
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+  }
+
+  .epigraph .source {
+    margin-top: 20px;
+    font-size: 13px;
+    letter-spacing: 0;
+    color: var(--mute);
+  }
+
+  /* 此刻 */
+  .now {
+    max-width: 560px;
+    margin-top: 120px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .now h2 {
+    margin-bottom: 8px;
+    font-size: 15px;
+    color: var(--acc);
+  }
+
+  .index {
+    margin-top: 120px;
+  }
+</style>

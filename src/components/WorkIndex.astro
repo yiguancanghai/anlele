@@ -1,28 +1,33 @@
 ---
 // 首页作品目录：所有板块混在一起。服务端按日期输出，客户端加载后洗牌
 // 编号是 CSS 计数器（见 global.css 的 .rows），重排后自动重新编号
-import { getCollection } from 'astro:content';
+import Only from './Only.astro';
+import { getWorks } from '../i18n/content';
+import { getLang, htmlLang, kindLabel, localize, useT } from '../i18n/ui';
 
-const live = ({ data }: { data: { draft?: boolean } }) => !data.draft;
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
 const [words, sounds, frames, build] = await Promise.all([
-  getCollection('words', live),
-  getCollection('sounds', live),
-  getCollection('frames', live),
-  getCollection('build', live),
+  getWorks('words', lang),
+  getWorks('sounds', lang),
+  getWorks('frames', lang),
+  getWorks('build', lang),
 ]);
 
 // 每行：标题 / 类型小字 / 日期，以及跳去哪里（歌没有 href，点了直接播放）
+// textLang：标题实际的语言（和页面语言不同时标出来）
+const textLang = (w: { contentLang: 'zh' | 'en' }) => (w.contentLang === lang ? undefined : htmlLang(w.contentLang));
 const items = [
-  ...words.map((w) => ({ title: w.data.title, kind: w.data.kind, date: w.data.date, href: `/words/${w.id}/` })),
-  ...sounds.map((s) => ({ title: s.data.title, kind: '歌', date: s.data.date, track: s.id })),
-  ...frames.map((f) => ({ title: f.data.title, kind: f.data.kind, date: f.data.date, href: '/frames/' })),
-  ...build.map((b) => ({ title: b.data.title, kind: b.data.featured ? 'App' : '项目', date: b.data.date, href: '/build/' })),
-].sort((a, b) => b.date.getTime() - a.date.getTime());
+  ...words.map((w) => ({ w, kind: w.data.kind, href: localize(`/words/${w.id}/`, lang) })),
+  ...sounds.map((w) => ({ w, kind: '歌', track: w.id })),
+  ...frames.map((w) => ({ w, kind: w.data.kind, href: localize('/frames/', lang) })),
+  ...build.map((w) => ({ w, kind: w.data.featured ? 'App' : '项目', href: localize('/build/', lang) })),
+].sort((a, b) => b.w.data.date.getTime() - a.w.data.date.getTime());
 ---
 
 <div class="head">
-  <p>可以按任意顺序阅读</p>
-  <button type="button" data-shuffle>换一种顺序</button>
+  <p>{t('home.order')}</p>
+  <button type="button" data-shuffle>{t('home.shuffle')}</button>
 </div>
 
 <ul class="rows" data-work-index>
@@ -31,10 +36,13 @@ const items = [
       const inner = (
         <>
           <span>
-            <span class="row-title">{item.title}</span>
-            <span class="row-sub">{item.kind}</span>
+            <span class="row-title">
+              <span lang={textLang(item.w)}>{item.w.data.title}</span>
+              {item.w.missing && <Only />}
+            </span>
+            <span class="row-sub">{kindLabel(item.kind, lang)}</span>
           </span>
-          <span class="row-meta latin">{item.date.getFullYear()}</span>
+          <span class="row-meta latin">{item.w.data.date.getFullYear()}</span>
         </>
       );
       return (

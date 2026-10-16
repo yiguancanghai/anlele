@@ -1,0 +1,130 @@
+---
+// 字：诗、读书笔记、随笔的列表，可按类型筛选（中英共用）
+import Base from '../layouts/Base.astro';
+import Only from '../components/Only.astro';
+import { getWorks } from '../i18n/content';
+import { getLang, htmlLang, kindLabel, localize, useT } from '../i18n/ui';
+import { firstLine } from '../scripts/text';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const words = await getWorks('words', lang);
+// data-filter 用中文类型名匹配，按钮上显示当前语言
+const kinds = [
+  { key: '全部', label: t('words.all') },
+  { key: '诗', label: t('words.poems') },
+  { key: '读书笔记', label: t('words.notes') },
+  { key: '随笔', label: t('words.essays') },
+];
+---
+
+<Base title={t('nav.words')} description={t('words.sub')}>
+  <section class="wrap section">
+    <h1 class="section-title rise">{t('nav.words')}</h1>
+    <p class="section-sub rise" style="--i: 1">{t('words.sub')}</p>
+
+    <div class="filter rise" style="--i: 2" role="group" aria-label={t('words.filter')}>
+      {
+        kinds.map((k) => (
+          <button type="button" data-filter={k.key} aria-pressed={k.key === '全部' ? 'true' : 'false'}>
+            {k.label}
+          </button>
+        ))
+      }
+    </div>
+
+    <ul class="rows rise" style="--i: 2" id="words-list">
+      {
+        words.map((w) => (
+          <li data-kind={w.data.kind}>
+            <a class="row" href={localize(`/words/${w.id}/`, lang)}>
+              <span class="one-line">
+                <span class="row-title">
+                  <span lang={w.contentLang === lang ? undefined : htmlLang(w.contentLang)}>{w.data.title}</span>
+                  {w.missing && <Only />}
+                </span>
+                <span class="excerpt" lang={w.contentLang === lang ? undefined : htmlLang(w.contentLang)}>
+                  {w.data.excerpt ?? firstLine(w.body)}
+                </span>
+              </span>
+              <span class="row-meta">{kindLabel(w.data.kind, lang)}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<script>
+  // 客户端筛选：隐藏不属于所选类型的行（编号由 CSS 自动重排）
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('button[data-filter]');
+    if (!btn) return;
+    const kind = btn.dataset.filter;
+    document.querySelectorAll<HTMLButtonElement>('button[data-filter]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b === btn));
+    });
+    document.querySelectorAll<HTMLLIElement>('#words-list > li').forEach((li) => {
+      li.hidden = kind !== '全部' && li.dataset.kind !== kind;
+    });
+  });
+</script>
+
+<style>
+  /* 这一页的列表收紧：每行矮一些，标题和首句摘录在同一行，放不下就截断 */
+  #words-list :global(.row) {
+    grid-template-columns: 44px minmax(0, 1fr) auto; /* 中间一栏允许收缩，才能截断摘录 */
+    padding: 12px 0;
+  }
+
+  .one-line {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .one-line .row-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 手机上长标题换行，摘录用剩下的空间 */
+  @media (max-width: 640px) {
+    .one-line .row-title {
+      white-space: normal;
+    }
+  }
+
+  .excerpt {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    margin: 56px 0 20px;
+  }
+
+  .filter button {
+    min-height: 44px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .filter button:hover,
+  .filter button[aria-pressed='true'] {
+    color: var(--acc);
+  }
+</style>

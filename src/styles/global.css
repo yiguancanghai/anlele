@@ -7,7 +7,6 @@
 
 html {
   background: var(--bg);
-  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -106,6 +105,18 @@ button {
   white-space: nowrap;
 }
 
+/* 切换主题时短暂打开颜色过渡（ThemeToggle 加上 .theme-fade，0.7s 后移除）
+   只在没有开启"减少动态效果"时生效 */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-fade,
+  .theme-fade * {
+    transition:
+      background-color 0.6s ease,
+      color 0.6s ease,
+      border-color 0.6s ease !important;
+  }
+}
+
 /* 尊重"减少动态效果"：关闭所有动画，直接显示终态 */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -197,4 +208,33 @@ button {
     opacity: 0;
     transform: translateY(6px);
   }
+}
+
+/* 当前语言没有这件作品的版本时，标题旁的小字（"仅有英文 / In Chinese only"） */
+.only {
+  margin-left: 10px;
+  font-family: var(--font-latin);
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--mute);
+}
+
+.only:lang(zh) {
+  font-family: var(--font-zh);
+  font-style: normal;
+  font-size: 12px;
+}
+
+/* 英文界面（以及中文页面里的英文内容）：用 Cormorant Garamond 正体，并放大到和中文相近的视觉大小
+   英文页面里的中文内容（带 lang="zh-CN"）仍用 Noto Serif SC */
+:root[lang='en'] body,
+:root[lang='zh-CN'] [lang='en'] {
+  font-family: var(--font-latin);
+  font-size-adjust: 0.46;
+}
+
+:root[lang='en'] [lang|='zh'] {
+  font-family: var(--font-zh);
+  font-size-adjust: none;
 }

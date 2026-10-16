@@ -1,0 +1,164 @@
+---
+// 单篇：按 kind 用三种版式（诗 / 读书笔记 / 随笔）。中英共用，路由在 pages/words 和 pages/en/words
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Only from '../components/Only.astro';
+import PoemReader from '../components/PoemReader.astro';
+import type { Work } from '../i18n/content';
+import { getLang, htmlLang, localize, useT } from '../i18n/ui';
+import { firstLine } from '../scripts/text';
+
+interface Props {
+  work: Work<'words'>;
+}
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const { work } = Astro.props;
+const { Content } = await render(work.entry);
+const { title, kind, date, book, author, excerpt } = work.data;
+const year = date.getFullYear();
+// 正文和页面语言不同时（比如英文页面上的中文原文）标出语言
+const textLang = work.contentLang === lang ? undefined : htmlLang(work.contentLang);
+---
+
+<Base title={title} description={excerpt ?? firstLine(work.body)}>
+  <article class={`wrap piece${kind === '诗' ? ' is-poem' : ''}`}>
+    {
+      kind !== '诗' && (
+        <div class="top">
+          <a class="back" href={localize('/words/', lang)}>{t('words.back')}</a>
+        </div>
+      )
+    }
+
+    {kind === '诗' && <PoemReader work={work} />}
+
+    {
+      kind === '读书笔记' && (
+        <div class="note rise">
+          <h1 lang={textLang}>{title}</h1>
+          <p class="source" lang={textLang}>
+            {book && (work.contentLang === 'zh' ? `《${book}》` : <i>{book}</i>)}
+            {work.contentLang === 'en' && book && author && ' — '}
+            {author}
+          </p>
+          {work.missing && <Only />}
+          <div lang={textLang}>
+            <Content />
+          </div>
+        </div>
+      )
+    }
+
+    {
+      kind === '随笔' && (
+        <div class="essay rise">
+          <h1 lang={textLang}>{title}</h1>
+          <p class="source latin">
+            {year}
+            {work.missing && <Only />}
+          </p>
+          <div lang={textLang}>
+            <Content />
+          </div>
+        </div>
+      )
+    }
+  </article>
+</Base>
+
+<style>
+  .piece {
+    padding-top: 48px;
+    padding-bottom: 120px;
+  }
+
+  /* 诗：顶部留白收紧，让诗尽量一屏放下 */
+  .piece.is-poem {
+    padding-top: 24px;
+    padding-bottom: 64px;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 56px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .top a,
+  .top button {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .top button {
+    justify-content: flex-end;
+  }
+
+  .top a:hover,
+  .top button:hover {
+    color: var(--acc);
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .source {
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  .source.latin {
+    font-size: 17px;
+  }
+
+  /* 读书笔记：引用块是摘录，紧跟的段落是批注 */
+  .note {
+    max-width: 720px;
+  }
+
+  .note :global(blockquote) {
+    margin: 64px 0 0;
+    font-size: 19px;
+    line-height: 2.1;
+  }
+
+  .note :global(blockquote + p) {
+    margin-top: 16px;
+    font-size: 15px;
+    color: var(--mute);
+  }
+
+  .note :global(blockquote + p::before) {
+    content: '注';
+    margin-right: 12px;
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--acc);
+  }
+
+  /* 随笔：普通文章，窄栏 */
+  .essay {
+    max-width: 600px;
+  }
+
+  .essay :global(p) {
+    line-height: 2.1;
+  }
+
+  /* 正文包在 .source 后面的那个 div 里 */
+  .essay .source + div {
+    margin-top: 56px;
+  }
+
+  .essay :global(p + p) {
+    margin-top: 1.6em;
+  }
+</style>

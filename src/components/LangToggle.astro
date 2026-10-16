@@ -1,0 +1,61 @@
+---
+// 中 / EN 切换：停在同一页的另一种语言版本。当前语言为正文色，另一个为次要色
+// 选择会记住（localStorage 的 lang），只用于下次进中文首页时提示一行"Read in English →"
+import { getLang, switchPath, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const path = Astro.url.pathname;
+---
+
+<div class="lang" role="group" aria-label={t('lang.label')}>
+  <a href={switchPath(path, 'zh')} lang="zh-CN" hreflang="zh-CN" data-set-lang="zh" aria-current={lang === 'zh' ? 'true' : undefined}>中</a>
+  <span aria-hidden="true">/</span>
+  <a href={switchPath(path, 'en')} lang="en" hreflang="en" data-set-lang="en" aria-current={lang === 'en' ? 'true' : undefined}>EN</a>
+</div>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const link = (e.target as Element).closest<HTMLElement>('[data-set-lang]');
+    if (!link) return;
+    try {
+      localStorage.setItem('lang', link.dataset.setLang!);
+    } catch {
+      // 记不住也不影响切换
+    }
+  });
+</script>
+
+<style>
+  .lang {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  a {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 44px;
+  }
+
+  a:first-child {
+    font-family: var(--font-zh);
+  }
+
+  a:last-child {
+    font-family: var(--font-latin);
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+
+  a[aria-current] {
+    color: var(--ink);
+  }
+
+  a:not([aria-current]):hover {
+    color: var(--acc);
+  }
+</style>

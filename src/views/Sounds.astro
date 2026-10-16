@@ -1,0 +1,48 @@
+---
+// 声：歌的列表。点一行开始播放，播放器在全局布局里（中英共用）
+import Base from '../layouts/Base.astro';
+import TrackRow from '../components/TrackRow.astro';
+import { getWorks } from '../i18n/content';
+import { getLang, htmlLang, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+const sounds = await getWorks('sounds', lang);
+---
+
+<Base title={t('nav.sounds')} description={t('sounds.description')}>
+  <section class="wrap section">
+    <h1 class="section-title rise">{t('nav.sounds')}</h1>
+    <p class="section-sub rise" style="--i: 1">{t('sounds.sub')}</p>
+
+    <ul class="rise" style="--i: 2">
+      {
+        sounds.map((s) => (
+          <li>
+            <TrackRow
+              id={s.id}
+              title={s.data.title}
+              note={s.data.note}
+              duration={s.data.duration}
+              missing={s.missing}
+              lang={s.contentLang === lang ? undefined : htmlLang(s.contentLang)}
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  ul {
+    list-style: none;
+    margin: 72px 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  li {
+    border-bottom: 1px solid var(--line);
+  }
+</style>

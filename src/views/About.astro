@@ -1,0 +1,64 @@
+---
+// 我：两段话 + 联系方式，文字都在 src/data/site.ts（中英共用）
+import Base from '../layouts/Base.astro';
+import { about, contacts } from '../data/site';
+import { getLang, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+---
+
+<Base title={t('nav.about')} description={t('about.description')}>
+  <section class="wrap section">
+    <h1 class="section-title rise">{t('nav.about')}</h1>
+
+    <div class="text rise" style="--i: 1">
+      {about[lang].map((p) => <p>{p}</p>)}
+    </div>
+
+    <ul class="rise" style="--i: 2">
+      {
+        contacts.map((c) => (
+          <li>
+            <a href={c.href}>{c.label[lang]}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .text {
+    max-width: 560px;
+    margin-top: 56px;
+    line-height: 2.1;
+  }
+
+  /* 第一段米白，之后的段落用次要色 */
+  .text p + p {
+    margin-top: 1.4em;
+    color: var(--mute);
+  }
+
+  ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 28px;
+    margin: 48px 0 0;
+    padding: 0;
+    font-size: 14px;
+  }
+
+  ul a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--mute);
+  }
+
+  ul a:hover {
+    color: var(--acc);
+  }
+</style>

@@ -4,10 +4,11 @@
 //   页面上任何带 data-track-id 的按钮被点击 → 发出 player:toggle 事件（detail 是歌的 id）
 //   播放器状态变化 → 发出 player:change 事件 → 更新播放器界面，并高亮页面上对应的那一行
 import { formatTime } from './text';
+import { ui, type Lang } from '../i18n/ui';
 
 interface Track {
   id: string;
-  title: string;
+  title: Record<Lang, string>;
   audio: string;
   duration: number;
   cover?: string;
@@ -19,6 +20,8 @@ const tracks: Track[] = JSON.parse(document.getElementById('player')?.dataset.tr
 let current: Track | undefined;
 
 const one = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
+// 当前页面的语言（切换语言后播放器不会重新渲染，所以每次都现读）
+const lang = (): Lang => (document.documentElement.lang === 'en' ? 'en' : 'zh');
 const changed = () => document.dispatchEvent(new CustomEvent('player:change'));
 
 function start(track: Track) {
@@ -28,7 +31,7 @@ function start(track: Track) {
   // 锁屏 / 耳机线控上显示歌名
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title,
+      title: track.title[lang()],
       artist: 'anlele',
       artwork: track.cover ? [{ src: track.cover }] : [],
     });
@@ -66,13 +69,19 @@ function renderTime() {
 // 播放器界面 + 页面上各行的高亮
 function render() {
   const el = one('#player');
-  if (!el || !current) return;
+  if (!el) return;
+  const t = ui[lang()];
+  el.setAttribute('aria-label', t['player.label']);
+  one('[data-player-seek]')?.setAttribute('aria-label', t['player.seek']);
+  const nextBtn = one('[data-player-next]');
+  if (nextBtn) nextBtn.textContent = t['player.next'];
+  if (!current) return;
   const playing = !audio.paused;
   el.hidden = false; // 第一次点歌之后才出现
   el.dataset.playing = String(playing);
-  one('[data-player-toggle]')?.setAttribute('aria-label', playing ? '暂停' : '播放');
+  one('[data-player-toggle]')?.setAttribute('aria-label', playing ? t['player.pause'] : t['player.play']);
   const title = one('[data-player-title]');
-  if (title) title.textContent = current.title;
+  if (title) title.textContent = current.title[lang()];
   renderTime();
   document.querySelectorAll<HTMLElement>('[data-track-id]').forEach((row) => {
     row.setAttribute('aria-pressed', String(playing && row.dataset.trackId === current?.id));

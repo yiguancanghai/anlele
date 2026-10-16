@@ -27,7 +27,7 @@ git push
 
 ## 新增一首诗
 
-在 `src/content/words/` 里新建一个文件，文件名用英文或拼音，比如 `ye-hang.md`，它会成为网址：`anlele.org/words/ye-hang/`。
+在 `src/content/words/zh/` 里新建一个文件，文件名用拼音或英文，比如 `yehang.md`，它会成为网址：`anlele.org/words/yehang/`（英文页是 `anlele.org/en/words/yehang/`）。
 
 ```md
 ---
@@ -52,7 +52,7 @@ kind: 诗
 ## 新增一首歌
 
 1. 把 mp3 上传到 Cloudflare R2 的 `anlele-media` 存储桶，文件名用英文，比如 `ye-ben.mp3`。上传后地址是 `https://media.anlele.org/ye-ben.mp3`。
-2. 在 `src/content/sounds/` 新建 `ye-ben.md`：
+2. 在 `src/content/sounds/zh/` 新建 `yeben.md`：
 
 ```md
 ---
@@ -73,7 +73,7 @@ tools: [Suno]
 ## 新增一部短片
 
 1. 先把视频传到 B站，记下视频号（网址里 `BV` 开头的那串）。
-2. 在 `src/content/frames/` 新建一个文件：
+2. 在 `src/content/frames/zh/` 新建一个文件：
 
 ```md
 ---
@@ -90,9 +90,25 @@ cover: https://media.anlele.org/cover-xxx.jpg
 
 - `cover` 可以不写，不写就显示深色底和播放图标。
 
+## 加英文版
+
+在同一类的 `en/` 文件夹里放一个**同名**文件，只写和中文不同的字段，其余（日期、音频地址、视频号…）自动沿用中文版。比如给《夜航》加英译 `src/content/words/en/yehang.md`：
+
+```md
+---
+title: Night Voyage
+translator: Tr. anlele
+---
+
+The lighthouse said one sentence
+all night long
+```
+
+没有英文版的作品，英文页面会显示中文原文并标 "In Chinese only"。反过来，只写了英文版（文件只在 `en/` 里，这时要写全所有字段）的作品，中文页面会显示英文原文并标"仅有英文"。
+
 ## 改"此刻"
 
-直接改 `src/content/now.md`，一行一件事，行与行之间空一行。
+直接改 `src/content/now.md`，一行一件事，行与行之间空一行。英文版在 `src/content/now.en.md`（删掉这个文件，英文页就显示中文原文）。
 
 ## 其他常改的地方
 
@@ -100,8 +116,9 @@ cover: https://media.anlele.org/cover-xxx.jpg
 |---|---|
 | 首页门口的那句诗 | `src/data/site.ts` 里的 `epigraph` |
 | "我"页面的两段话、联系方式 | `src/data/site.ts` 里的 `about`、`contacts` |
-| Mirror AI 的介绍、链接、功能点 | `src/content/build/mirror-ai.md` |
-| 新增一个项目 | 在 `src/content/build/` 新建文件，照 `anlele-org.md` 写 |
+| Mirror AI 的介绍、链接、功能点 | `src/content/build/zh/mirror-ai.md`（英文在 `build/en/` 同名文件） |
+| 新增一个项目 | 在 `src/content/build/zh/` 新建文件，照 `anlele-org.md` 写 |
+| 界面上的固定文字（导航、副标题、按钮） | `src/i18n/ui.ts` |
 | 颜色 | `src/styles/tokens.css` |
 
 字段写错（比如 `kind` 拼错、漏了 `title`）时，`npm run build` 会报错并指出是哪个文件，Cloudflare 也不会发布出错的版本，线上保持原样。
