@@ -3,7 +3,7 @@
 import Base from '../layouts/Base.astro';
 import TrackRow from '../components/TrackRow.astro';
 import { getWorks } from '../i18n/content';
-import { getLang, htmlLang, useT } from '../i18n/ui';
+import { getLang, htmlLang, localize, useT } from '../i18n/ui';
 
 const lang = getLang(Astro.currentLocale);
 const t = useT(lang);
@@ -24,6 +24,8 @@ const sounds = await getWorks('sounds', lang);
               title={s.data.title}
               note={s.data.note}
               duration={s.data.duration}
+              href={localize(`/sounds/${s.id}/`, lang)}
+              playLabel={lang === 'zh' ? `${t('player.play')}《${s.data.title}》` : `${t('player.play')} ${s.data.title}`}
               missing={s.missing}
               lang={s.contentLang === lang ? undefined : htmlLang(s.contentLang)}
             />

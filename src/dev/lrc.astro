@@ -1,0 +1,377 @@
+---
+// 打轴小工具（只在 npm run dev 时出现：http://localhost:4321/dev/lrc/）
+// 用法：选一首歌 → 点"开始" → 每唱到新的一句按一下空格 → 保存
+//   ← 撤销上一次   ↑ ↓ 把选中的那句提前 / 推后 0.1 秒   点某一句：从那里重新开始
+import '../styles/tokens.css';
+import '../styles/global.css';
+import { getWorks } from '../i18n/content';
+import { getLyrics, lyricsBlock } from '../scripts/lyrics';
+
+const songs = (await getWorks('sounds', 'zh')).map((s) => {
+  const lrc = { zh: getLyrics(s.id, 'zh'), en: getLyrics(s.id, 'en') };
+  return { id: s.id, title: s.data.title, audio: s.data.audio, text: lyricsBlock(s.body) ?? '', lrc };
+});
+---
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>打轴 · anlele</title>
+  </head>
+  <body>
+    <main class="wrap" id="tool" data-songs={JSON.stringify(songs)}>
+      <h1 class="section-title">打轴</h1>
+      <p class="hint">
+        选一首歌，点"开始"。每唱到新的一句就按一下<kbd>空格</kbd>。<kbd>←</kbd> 撤销上一次，<kbd>↑</kbd><kbd>↓</kbd> 把选中的那句提前 / 推后 0.1 秒，点某一句从那里重新开始。最后一行"（结束）"标在歌词唱完的地方。
+      </p>
+
+      <div class="controls">
+        <label>歌 <select id="song"></select></label>
+        <label>存为
+          <select id="lang">
+            <option value="zh">中文歌词（zh/）</option>
+            <option value="en">英文歌词（en/）</option>
+          </select>
+        </label>
+        <label>速度
+          <select id="rate">
+            <option value="1">1×</option>
+            <option value="0.75">0.75×</option>
+          </select>
+        </label>
+      </div>
+
+      <details id="paste">
+        <summary>歌词文字（来自 md 里的 lyrics 代码块，也可以在这里粘贴，一行一句）</summary>
+        <textarea id="text" rows="10"></textarea>
+        <button type="button" id="load">用这些文字重新开始</button>
+      </details>
+
+      <div class="controls">
+        <button type="button" id="start">开始</button>
+        <button type="button" id="preview">预览</button>
+        <span id="clock" class="latin">0:00.00</span>
+        <span id="status"></span>
+      </div>
+
+      <audio id="audio" controls preload="auto"></audio>
+
+      <ol id="lines"></ol>
+
+      <h2 class="section-title">LRC</h2>
+      <textarea id="out" rows="10" readonly></textarea>
+      <div class="controls">
+        <button type="button" id="save">保存到项目</button>
+        <button type="button" id="copy">复制</button>
+        <span id="saved"></span>
+      </div>
+    </main>
+
+    <script>
+      interface Song {
+        id: string;
+        title: string;
+        audio: string;
+        text: string;
+        lrc: { zh?: { t: number; text: string }[]; en?: { t: number; text: string }[] };
+      }
+      interface Line {
+        text: string; // 空字符串是最后的"（结束）"
+        t?: number;
+      }
+
+      const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+      const songs: Song[] = JSON.parse($('tool').dataset.songs!);
+      const audio = $<HTMLAudioElement>('audio');
+      const list = $<HTMLOListElement>('lines');
+
+      let song: Song;
+      let lines: Line[] = [];
+      let cursor = 0; // 下一次按空格要标的那一句
+      let selected = -1; // ↑ ↓ 微调的那一句
+      let mode: 'tag' | 'preview' = 'tag';
+
+      const fmt = (t: number) => {
+        const m = Math.floor(t / 60);
+        const s = (t - m * 60).toFixed(2).padStart(5, '0');
+        return `${String(m).padStart(2, '0')}:${s}`;
+      };
+
+      // 从文字生成要打轴的句子（空行跳过），最后加一行"（结束）"
+      function fromText(text: string): Line[] {
+        const rows = text.split('\n').map((l) => l.trim()).filter(Boolean).map((text) => ({ text }));
+        return [...rows, { text: '' }];
+      }
+
+      function loadSong() {
+        song = songs.find((s) => s.id === $<HTMLSelectElement>('song').value)!;
+        const lang = $<HTMLSelectElement>('lang').value as 'zh' | 'en';
+        audio.src = song.audio;
+        const existing = song.lrc[lang] ?? [];
+        // 歌词文字：中文用 md 里的 lyrics 代码块；没有的话用已有 .lrc 里的句子
+        const text = (lang === 'zh' && song.text) || existing.filter((l) => l.text).map((l) => l.text).join('\n');
+        $<HTMLTextAreaElement>('text').value = text;
+        // 已经有 .lrc 的话，按顺序把原来的时间对到同样的句子上（只打了一半也能接着打）
+        lines = fromText(text);
+        let k = 0;
+        for (const line of lines) {
+          const hit = existing.slice(k).findIndex((l) => l.text === line.text);
+          if (hit < 0) break;
+          line.t = existing[k + hit].t;
+          k += hit + 1;
+        }
+        cursor = lines.findIndex((l) => l.t === undefined);
+        if (cursor < 0) cursor = lines.length;
+        selected = -1;
+        render();
+      }
+
+      function render() {
+        list.innerHTML = '';
+        lines.forEach((l, i) => {
+          const li = document.createElement('li');
+          li.dataset.i = String(i);
+          li.className = [i === cursor ? 'cursor' : '', i === selected ? 'selected' : ''].join(' ');
+          li.innerHTML = `<span class="t latin">${l.t === undefined ? '—' : fmt(l.t)}</span><span class="x"></span>`;
+          li.querySelector('.x')!.textContent = l.text || '（结束）';
+          list.append(li);
+        });
+        $<HTMLTextAreaElement>('out').value = lrc();
+        $('status').textContent = mode === 'tag' ? `下一句：${lines[cursor] ? lines[cursor].text || '（结束）' : '已全部标完'}` : '预览中';
+      }
+
+      function lrc() {
+        const head = `[ti:${song?.title ?? ''}]\n[offset:0]\n`;
+        return head + lines.filter((l) => l.t !== undefined).map((l) => `[${fmt(l.t!)}]${l.text}`).join('\n') + '\n';
+      }
+
+      // 播放时高亮当前唱到的那句（打轴和预览都用）
+      function tick() {
+        $('clock').textContent = fmt(audio.currentTime).replace(/^0/, '');
+        let now = -1;
+        lines.forEach((l, i) => {
+          if (l.t !== undefined && l.t <= audio.currentTime) now = i;
+        });
+        list.querySelectorAll('li').forEach((li, i) => li.classList.toggle('now', i === now));
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      document.addEventListener('keydown', (e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'INPUT') return;
+        if (e.key === ' ') {
+          e.preventDefault();
+          if (mode === 'preview') {
+            audio.paused ? audio.play() : audio.pause();
+          } else if (cursor < lines.length) {
+            lines[cursor].t = audio.currentTime; // currentTime 是歌曲本身的时间，慢速播放也不影响
+            selected = cursor;
+            cursor++;
+            render();
+          }
+        } else if (e.key === 'ArrowLeft' && mode === 'tag' && cursor > 0) {
+          e.preventDefault();
+          cursor--;
+          lines[cursor].t = undefined;
+          selected = cursor - 1;
+          render();
+        } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && selected >= 0 && lines[selected].t !== undefined) {
+          e.preventDefault();
+          lines[selected].t = Math.max(0, lines[selected].t! + (e.key === 'ArrowUp' ? -0.1 : 0.1));
+          render();
+        }
+      });
+
+      // 点某一句：从那里重新开始（从上一句的时间开始播放，下一次空格标这一句）
+      list.addEventListener('click', (e) => {
+        const li = (e.target as Element).closest<HTMLElement>('li');
+        if (!li) return;
+        const i = Number(li.dataset.i);
+        mode = 'tag';
+        cursor = i;
+        selected = i - 1;
+        audio.currentTime = i > 0 ? (lines[i - 1].t ?? 0) : 0;
+        audio.play();
+        render();
+      });
+
+      $('start').addEventListener('click', () => {
+        mode = 'tag';
+        lines.forEach((l) => (l.t = undefined));
+        cursor = 0;
+        selected = -1;
+        audio.currentTime = 0;
+        audio.play();
+        render();
+        (document.activeElement as HTMLElement)?.blur(); // 让空格不触发按钮
+      });
+
+      $('preview').addEventListener('click', () => {
+        mode = 'preview';
+        audio.currentTime = 0;
+        audio.play();
+        render();
+        (document.activeElement as HTMLElement)?.blur();
+      });
+
+      $('load').addEventListener('click', () => {
+        lines = fromText($<HTMLTextAreaElement>('text').value);
+        cursor = 0;
+        selected = -1;
+        render();
+      });
+
+      $('rate').addEventListener('change', () => (audio.playbackRate = Number($<HTMLSelectElement>('rate').value)));
+      audio.addEventListener('loadedmetadata', () => (audio.playbackRate = Number($<HTMLSelectElement>('rate').value)));
+      $('song').addEventListener('change', loadSong);
+      $('lang').addEventListener('change', loadSong);
+
+      // 保存后文件变了，开发服务器会刷新这个页面；先记下选中的歌，刷新后选回来并提示已保存
+      $('save').addEventListener('click', async () => {
+        const lang = $<HTMLSelectElement>('lang').value;
+        const path = `src/content/sounds/${lang}/${song.id}.lrc`;
+        sessionStorage.setItem('lrc-saved', JSON.stringify({ id: song.id, lang, path }));
+        const res = await fetch('/__dev/save-lrc', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: song.id, lang, lrc: lrc() }),
+        });
+        if (!res.ok) {
+          sessionStorage.removeItem('lrc-saved');
+          $('saved').textContent = '保存失败，请用"复制"';
+        }
+      });
+
+      $('copy').addEventListener('click', async () => {
+        await navigator.clipboard.writeText(lrc());
+        $('saved').textContent = '已复制';
+      });
+
+      songs.forEach((s) => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = s.title;
+        $('song').append(o);
+      });
+      const justSaved = JSON.parse(sessionStorage.getItem('lrc-saved') ?? 'null');
+      sessionStorage.removeItem('lrc-saved');
+      if (justSaved) {
+        $<HTMLSelectElement>('song').value = justSaved.id;
+        $<HTMLSelectElement>('lang').value = justSaved.lang;
+      }
+      loadSong();
+      if (justSaved) $('saved').textContent = `已保存到 ${justSaved.path}`;
+    </script>
+
+    <style>
+      main {
+        padding-top: 40px;
+        padding-bottom: 80px;
+        max-width: 760px;
+        font-size: 15px;
+      }
+
+      .hint {
+        margin: 8px 0 24px;
+        color: var(--mute);
+        font-size: 14px;
+      }
+
+      kbd {
+        margin: 0 2px;
+        padding: 0 6px;
+        border: 1px solid var(--line);
+        font-family: inherit;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 24px;
+        margin: 16px 0;
+      }
+
+      button {
+        min-height: 44px;
+        color: var(--acc);
+      }
+
+      select,
+      textarea {
+        font: inherit;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        padding: 4px 8px;
+      }
+
+      textarea {
+        display: block;
+        width: 100%;
+        margin-top: 8px;
+        line-height: 1.8;
+      }
+
+      summary {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: var(--mute);
+        cursor: pointer;
+      }
+
+      audio {
+        width: 100%;
+        margin: 8px 0 24px;
+      }
+
+      #clock {
+        font-size: 20px;
+      }
+
+      #status,
+      #saved {
+        color: var(--mute);
+      }
+
+      ol {
+        list-style: none;
+        margin: 0 0 40px;
+        padding: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      li {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        align-items: center;
+        min-height: 44px;
+        border-bottom: 1px solid var(--line);
+        color: var(--mute);
+        cursor: pointer;
+      }
+
+      li .t {
+        font-size: 16px;
+      }
+
+      li:hover,
+      li.now {
+        color: var(--ink);
+      }
+
+      li.cursor {
+        color: var(--acc);
+      }
+
+      li.selected .t {
+        color: var(--acc);
+      }
+    </style>
+  </body>
+</html>

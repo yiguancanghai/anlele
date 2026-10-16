@@ -1,0 +1,13 @@
+---
+import View from '../../../views/Song.astro';
+import { getWorks } from '../../../i18n/content';
+
+export async function getStaticPaths() {
+  const works = await getWorks('sounds', 'en');
+  return works.map((work) => ({ params: { slug: work.id }, props: { work } }));
+}
+
+const { work } = Astro.props;
+---
+
+<View work={work} />

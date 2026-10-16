@@ -1,5 +1,5 @@
 ---
-// "声"列表里的一行：小圆点 / 歌名 + 说明 / 时长。点击播放，再点暂停
+// "声"列表里的一行：左边小圆点区域直接播放（再点暂停）/ 歌名 + 说明，链接到单曲页 / 时长
 import Only from './Only.astro';
 import { formatTime } from '../scripts/text';
 
@@ -8,49 +8,72 @@ interface Props {
   title: string;
   note: string;
   duration: number;
+  href: string; // 单曲页
+  playLabel: string; // 圆点按钮给读屏器的说明，如"播放《夜奔》"
   missing?: boolean; // 当前语言没有这首歌的版本
   lang?: string; // 文字实际的语言（和页面不同时设置）
 }
-const { id, title, note, duration, missing, lang } = Astro.props;
+const { id, title, note, duration, href, playLabel, missing, lang } = Astro.props;
 ---
 
-<button type="button" class="track" data-track-id={id} aria-pressed="false">
-  <span class="dot" aria-hidden="true"></span>
-  <span lang={lang}>
-    <span class="row-title">{title}{missing && <Only />}</span>
-    <span class="row-sub">{note}</span>
-  </span>
+<div class="track">
+  <button type="button" class="dot-btn" data-track-id={id} aria-pressed="false" aria-label={playLabel}>
+    <span class="dot" aria-hidden="true"></span>
+  </button>
+  <a class="info" href={href}>
+    <span class="row-title" lang={lang}>{title}{missing && <Only />}</span>
+    <span class="row-sub" lang={lang}>{note}</span>
+  </a>
   <span class="row-meta latin">{formatTime(duration)}</span>
-</button>
+</div>
 
 <style>
   .track {
     display: grid;
-    grid-template-columns: 22px 1fr auto;
-    gap: 12px;
-    align-items: baseline;
-    width: 100%;
-    padding: 22px 0;
-    text-align: left;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 0 12px;
+    align-items: center;
+    padding: 12px 0;
+    margin-left: -19px; /* 让圆点和上面的标题左对齐 */
   }
 
-  /* 6px 橙色小圆点：只在悬停或正在播放时显示 */
+  .dot-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* 6px 橙色小圆点：悬停这一行或正在播放时显示 */
   .dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--acc);
     opacity: 0;
-    transform: translateY(-3px);
     transition: opacity 0.45s ease;
   }
 
+  /* 手机等没有悬停的设备：一直淡淡显示，提示这里可以点 */
+  @media (hover: none) {
+    .dot {
+      opacity: 0.35;
+    }
+  }
+
   .track:hover .dot,
-  .track[aria-pressed='true'] .dot {
+  .dot-btn:focus-visible .dot,
+  .dot-btn[aria-pressed='true'] .dot {
     opacity: 1;
   }
 
-  .track:hover .row-title {
+  .info {
+    display: block;
+    padding: 10px 0;
+  }
+
+  .info:hover .row-title,
+  .track:has([aria-pressed='true']) .row-title {
     color: var(--acc);
   }
 </style>

@@ -14,7 +14,7 @@ export const schemas = {
     draft: z.boolean().optional(),
   }),
 
-  // 声：歌。正文是歌词和创作说明
+  // 声：歌。正文是创作说明；歌词纯文本写在正文的 ```lyrics 代码块里，同步歌词放同名 .lrc 文件
   sounds: z.object({
     title: z.string(),
     date: z.coerce.date(),
@@ -24,6 +24,7 @@ export const schemas = {
     cover: z.string().optional(),
     tools: z.array(z.string()).optional(),
     related: z.string().optional(), // 关联的诗，写 words 里的文件名（不带 .md）
+    lyricsOffset: z.number().optional(), // 歌词整体挪动（秒）：正数推迟、负数提前，不用改 .lrc
     draft: z.boolean().optional(),
   }),
 

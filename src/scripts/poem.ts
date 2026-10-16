@@ -30,6 +30,9 @@ const PUNCT = /^[，。、；：？！—…,.;:?!]$/u;
 // 一个英文单词（含撇号、连字符）、一段空白、或者单个字符
 const TOKEN = /[\p{Script=Latin}\p{N}'’-]+|\s+|./gu;
 
+// 把一行拆成"字"（英文按单词），空白单独成段。歌词逐字出现也用它
+export const tokenize = (text: string): string[] => text.match(TOKEN) ?? [];
+
 function split(body: string): string[][] {
   const stanzas: string[][] = [[]];
   for (const raw of body.replace(/\r/g, '').trim().split('\n')) {
@@ -51,7 +54,7 @@ function time(stanzas: string[][], base: number, scale: number): PoemLayout {
   const out = stanzas.map((lines, si) =>
     lines.map((text, li) => {
       lineCount++;
-      const parts = text.match(TOKEN) ?? [];
+      const parts = tokenize(text);
       const tokens = parts.map((part, i) => {
         if (/^\s+$/.test(part)) return { text: part };
         const token = { text: part, delay: Math.round(t) };

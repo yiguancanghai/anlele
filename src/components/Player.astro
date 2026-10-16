@@ -4,15 +4,20 @@
 // 因为切换语言时它不会重新渲染，按钮文字由 player.ts 按页面语言设置
 import { getWorks } from '../i18n/content';
 import { getLang, useT } from '../i18n/ui';
+import { getLyrics } from '../scripts/lyrics';
 
 const t = useT(getLang(Astro.currentLocale));
 const [zh, en] = await Promise.all([getWorks('sounds', 'zh'), getWorks('sounds', 'en')]);
+// 同步歌词：时间已经加上了 lyricsOffset
+const lyrics = (id: string, lang: 'zh' | 'en', offset = 0) =>
+  getLyrics(id, lang)?.map((l) => ({ ...l, t: Math.max(0, l.t + offset) }));
 const tracks = zh.map((s) => ({
   id: s.id,
   title: { zh: s.data.title, en: en.find((e) => e.id === s.id)?.data.title ?? s.data.title },
   audio: s.data.audio,
   duration: s.data.duration,
   cover: s.data.cover,
+  lyrics: { zh: lyrics(s.id, 'zh', s.data.lyricsOffset), en: lyrics(s.id, 'en', s.data.lyricsOffset) },
 }));
 ---
 
@@ -28,7 +33,10 @@ const tracks = zh.map((s) => ({
         <path class="icon-pause" d="M8 5 V19 M16 5 V19"></path>
       </svg>
     </button>
-    <p class="title" data-player-title></p>
+    <div class="titles">
+      <p class="title" data-player-title></p>
+      <p class="lyric" data-player-lyric hidden></p>
+    </div>
     <p class="time latin" data-player-time></p>
     <button type="button" class="next" data-player-next>{t('player.next')}</button>
   </div>
@@ -105,12 +113,58 @@ const tracks = zh.map((s) => ({
     display: none;
   }
 
+  /* 歌名 + 当前这句歌词：宽屏并排，手机上下 */
+  .titles {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+  }
+
   .title {
+    flex: none;
+    max-width: 50%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .lyric {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    font-size: 13px;
+    color: var(--mute);
+  }
+
+  .lyric[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .bar {
+      height: auto;
+      min-height: 60px;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+
+    .titles {
+      flex-direction: column;
+      gap: 0;
+      line-height: 1.6;
+    }
+
+    .title {
+      max-width: 100%;
+    }
+
+    .lyric {
+      width: 100%;
+    }
   }
 
   .time {
