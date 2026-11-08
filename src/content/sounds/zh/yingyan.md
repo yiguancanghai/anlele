@@ -3,7 +3,7 @@ title: 鹰的眼睛
 date: 2026-11-08
 audio: https://media.anlele.org/yingyan.mp3
 duration: 289
-note: 划破长风的果敢锐利
+note: 送给她
 tools: [Suno]
 ---
 
