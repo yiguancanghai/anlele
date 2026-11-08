@@ -3,7 +3,7 @@
 //   - 英文页面：用英文版，英文版没写的字段从中文版继承；没有英文版的显示中文原文，标"In Chinese only"
 import { getCollection, type CollectionEntry } from 'astro:content';
 import type { z } from 'astro/zod';
-import { schemas, type Base } from '../schemas';
+import { hasWorks, schemas, type Base } from '../schemas';
 import type { Lang } from './ui';
 
 export interface Work<B extends Base> {
@@ -32,6 +32,7 @@ function check<B extends Base>(base: B, data: object, file: string) {
 }
 
 export async function getWorks<B extends Base>(base: B, lang: Lang): Promise<Work<B>[]> {
+  if (!hasWorks(base)) return []; // 这一类还没有作品
   const zh = new Map<string, CollectionEntry<B>>();
   const en = new Map<string, CollectionEntry<B>>();
   for (const entry of (await getCollection(base)) as CollectionEntry<B>[]) {

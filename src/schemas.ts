@@ -1,5 +1,6 @@
 // 每类作品的完整字段。中文版必须写全；英文版只写和中文不同的字段，其余从中文版继承
 // （合并和校验在 src/i18n/content.ts）
+import { existsSync, readdirSync } from 'node:fs';
 import { z } from 'astro/zod';
 
 export const schemas = {
@@ -54,3 +55,11 @@ export const schemas = {
 };
 
 export type Base = keyof typeof schemas;
+
+// 某一类目前有没有任何作品（zh/ 或 en/ 里有 .md 文件）
+// 一件都没有时跳过加载和读取，免得构建报"没找到文件 / 集合为空"的警告
+export const hasWorks = (base: Base) =>
+  ['zh', 'en'].some((l) => {
+    const dir = `./src/content/${base}/${l}`;
+    return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith('.md'));
+  });

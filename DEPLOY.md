@@ -59,9 +59,7 @@ Cloudflare 后台的菜单名字偶尔会调整，下面写的是功能所在的
    ]
    ```
 
-4. 上传一首歌试试（比如 `chao-xi.mp3`），然后把 `src/content/sounds/chao-xi.md` 里的 `audio` 改成 `https://media.anlele.org/chao-xi.mp3`，`duration` 改成真实秒数。
-
-`public/audio/` 里的几个 wav 只是占位，换成 R2 地址后可以删掉。
+4. 以后加歌：mp3 传到这个存储桶，再按 `README.md` 里"新增一首歌"的步骤写一个文件。
 
 ## 5. Cloudflare Web Analytics
 

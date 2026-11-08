@@ -56,6 +56,7 @@ const songs = (await getWorks('sounds', 'zh')).map((s) => {
         <span id="clock" class="latin">0:00.00</span>
         <span id="status"></span>
       </div>
+      <p id="warn"></p>
 
       <audio id="audio" controls preload="auto"></audio>
 
@@ -131,14 +132,21 @@ const songs = (await getWorks('sounds', 'zh')).map((s) => {
 
       function render() {
         list.innerHTML = '';
+        let prev = -1;
+        let bad = 0;
         lines.forEach((l, i) => {
+          // 时间比上一句还早：多半是连按了空格，需要从这里重打
+          const early = l.t !== undefined && l.t < prev;
+          if (early) bad++;
+          if (l.t !== undefined) prev = Math.max(prev, l.t);
           const li = document.createElement('li');
           li.dataset.i = String(i);
-          li.className = [i === cursor ? 'cursor' : '', i === selected ? 'selected' : ''].join(' ');
+          li.className = [i === cursor ? 'cursor' : '', i === selected ? 'selected' : '', early ? 'early' : ''].join(' ');
           li.innerHTML = `<span class="t latin">${l.t === undefined ? '—' : fmt(l.t)}</span><span class="x"></span>`;
-          li.querySelector('.x')!.textContent = l.text || '（结束）';
+          li.querySelector('.x')!.textContent = (l.text || '（结束）') + (early ? '　← 比上一句早' : '');
           list.append(li);
         });
+        $('warn').textContent = bad ? `有 ${bad} 句的时间比上一句早，点第一句橙色的前一句，从那里重新打到最后` : '';
         $<HTMLTextAreaElement>('out').value = lrc();
         $('status').textContent = mode === 'tag' ? `下一句：${lines[cursor] ? lines[cursor].text || '（结束）' : '已全部标完'}` : '预览中';
       }
@@ -370,6 +378,11 @@ const songs = (await getWorks('sounds', 'zh')).map((s) => {
       }
 
       li.selected .t {
+        color: var(--acc);
+      }
+
+      li.early,
+      #warn {
         color: var(--acc);
       }
     </style>
