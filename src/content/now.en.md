@@ -1,5 +1,5 @@
-Reading: Yourcenar, *Memoirs of Hadrian* (example)
+Writing a song
 
-Listening: rain on the air conditioner outside (example)
+Listening: the wind howling outside the window
 
-One small thing today: the osmanthus downstairs is in bloom (example)
+One small thing today: a gale came up at dusk, and I stayed in eating chive pockets
