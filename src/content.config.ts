@@ -1,5 +1,5 @@
 // 内容集合：每类作品一个文件夹，下分 zh/（中文，主版本）和 en/（英文，可选）
-// 同一件作品两种语言用同一个文件名，比如 words/zh/yehang.md 和 words/en/yehang.md
+// 同一件作品两种语言用同一个文件名，比如 words/zh/huanghun.md 和 words/en/huanghun.md
 // 字段写错时构建会报错并指出文件（完整校验在 src/i18n/content.ts）
 import { defineCollection } from 'astro:content';
 import { glob, type Loader } from 'astro/loaders';

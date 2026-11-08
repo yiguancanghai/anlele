@@ -1,5 +1,5 @@
 // 歌词（构建时用）
-//   - 同步歌词：歌的 md 旁边放一个同名 .lrc 文件，如 sounds/zh/chaoxi.lrc（英文歌词或英译放 sounds/en/）
+//   - 同步歌词：歌的 md 旁边放一个同名 .lrc 文件，如 sounds/zh/yeben.lrc（英文歌词或英译放 sounds/en/）
 //   - 歌词纯文本：写在 md 正文里的 ```lyrics 代码块中（打轴工具读它；页面上不当作创作说明显示）
 import type { Lang } from '../i18n/ui';
 import { tokenize } from './poem';

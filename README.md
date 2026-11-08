@@ -27,21 +27,20 @@ git push
 
 ## 新增一首诗
 
-在 `src/content/words/zh/` 里新建一个文件，文件名用拼音或英文，比如 `yehang.md`，它会成为网址：`anlele.org/words/yehang/`（英文页是 `anlele.org/en/words/yehang/`）。
+在 `src/content/words/zh/` 里新建一个文件，文件名用拼音或英文，比如 `huanghun.md`，它会成为网址：`anlele.org/words/huanghun/`（英文页是 `anlele.org/en/words/huanghun/`）。
 
 ```md
 ---
-title: 夜航
-date: 2026-09-20
+title: 诗的标题
+date: 2026-11-08
 kind: 诗
 ---
 
-灯塔把一句话
-说了整整一夜
+第一行
+第二行
 
-海没有回答
-只是把船
-轻轻推回岸边
+空一行，就是新的一节
+第四行
 ```
 
 - 每一行就是诗的一行，空一行就是分节。
@@ -118,16 +117,16 @@ cover: https://media.anlele.org/cover-xxx.jpg
 
 ## 加英文版
 
-在同一类的 `en/` 文件夹里放一个**同名**文件，只写和中文不同的字段，其余（日期、音频地址、视频号…）自动沿用中文版。比如给《夜航》加英译 `src/content/words/en/yehang.md`：
+在同一类的 `en/` 文件夹里放一个**同名**文件，只写和中文不同的字段，其余（日期、音频地址、视频号…）自动沿用中文版。比如给上面那首诗加英译，就新建 `src/content/words/en/huanghun.md`：
 
 ```md
 ---
-title: Night Voyage
+title: English title
 translator: Tr. anlele
 ---
 
-The lighthouse said one sentence
-all night long
+First line
+second line
 ```
 
 没有英文版的作品，英文页面会显示中文原文并标 "In Chinese only"。反过来，只写了英文版（文件只在 `en/` 里，这时要写全所有字段）的作品，中文页面会显示英文原文并标"仅有英文"。
