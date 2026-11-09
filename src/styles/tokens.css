@@ -1,7 +1,7 @@
 /* 全站颜色和字体，改这里即可。颜色分深浅两套，由 <html data-theme> 决定 */
 :root {
-  --font-zh: 'Noto Serif SC', 'Songti SC', serif;
-  --font-latin: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  --font-zh: 'LXGW WenKai', 'Kaiti SC', 'STKaiti', serif; /* 霞鹜文楷 */
+  --font-latin: 'Cormorant Garamond', 'LXGW WenKai', serif; /* 西文；里面夹着中文时用文楷 */
 
   --wrap: 1080px; /* 内容容器最大宽度 */
   --pad: 28px; /* 左右内边距 */

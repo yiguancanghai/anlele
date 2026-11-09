@@ -18,7 +18,3 @@ export function splitPoem(body: string): PoemLayout {
   const out = stanzas.filter((s) => s.length);
   return { stanzas: out, lineCount: out.reduce((n, s) => n + s.length, 0) };
 }
-
-// 把一行拆成"字"（英文按单词），空白单独成段。单曲页歌词的当前句逐字出现用它
-const TOKEN = /[\p{Script=Latin}\p{N}'’-]+|\s+|./gu;
-export const tokenize = (text: string): string[] => text.match(TOKEN) ?? [];

@@ -1,13 +1,13 @@
 ---
 // 单曲页：歌名、说明、播放按钮 / 歌词（跟着歌走）/ 创作说明（中英共用）
-//   有同名 .lrc：歌词随播放高亮，当前句逐字洇开，自动滚动，点任意一句跳到那里播放
+//   有同名 .lrc：歌词随播放高亮，自动滚动，点任意一句跳到那里播放
 //   没有 .lrc 但正文里有 ```lyrics 代码块：静态显示歌词
 //   都没有（纯音乐）：只显示创作说明
 import Base from '../layouts/Base.astro';
 import Only from '../components/Only.astro';
 import { getWorks, type Work } from '../i18n/content';
 import { getLang, htmlLang, localize, useT, type Lang } from '../i18n/ui';
-import { getLyrics, lineTokens, lyricsBlock } from '../scripts/lyrics';
+import { getLyrics, lyricsBlock } from '../scripts/lyrics';
 import { formatTime } from '../scripts/text';
 
 interface Props {
@@ -23,7 +23,7 @@ const tag = (l: Lang) => (l === lang ? undefined : htmlLang(l));
 // 同步歌词：优先用页面语言的 .lrc，没有就用另一种
 const lyricsLang: Lang | undefined = getLyrics(id, lang) ? lang : getLyrics(id, lang === 'zh' ? 'en' : 'zh') ? (lang === 'zh' ? 'en' : 'zh') : undefined;
 const synced = lyricsLang && getLyrics(id, lyricsLang)!.map((l) => ({ ...l, t: Math.max(0, l.t + (data.lyricsOffset ?? 0)) }));
-const lines = synced?.map((l, i) => ({ ...l, tokens: lineTokens(l.text, (synced[i + 1]?.t ?? data.duration) - l.t) }));
+const lines = synced;
 
 // 没有同步歌词时，显示 ```lyrics 里的纯文本（按空行分节）
 const lyricsText = lyricsBlock(work.body);
@@ -65,7 +65,7 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
           {lines.map((l, i) =>
             l.text ? (
               <button type="button" class="line" data-i={i} data-t={l.t}>
-                {l.tokens.map((tk) => (tk.delay === undefined ? tk.text : <span class="c" style={`--d:${tk.delay}ms`}>{tk.text}</span>))}
+                {l.text}
               </button>
             ) : (
               <span class="gap" data-i={i} aria-hidden="true" />
@@ -262,19 +262,23 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
   }
 
   .synced .line {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     min-height: 44px;
     transition:
-      color 0.4s ease,
-      opacity 0.4s ease;
+      color 0.6s ease,
+      opacity 0.6s ease;
   }
+
+
 
   .synced .line:hover {
     color: var(--ink);
   }
 
-  /* 播放这首歌时：唱过的最淡，没唱的次之，正在唱的是正文色 */
+  /* 播放这首歌时：唱过的最淡，没唱的次之，正在唱的是橙色（橙色只给"正在被看见的"） */
   .synced .past {
     opacity: 0.35;
   }
@@ -284,19 +288,7 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
   }
 
   .synced .now {
-    color: var(--ink);
-  }
-
-  .now .c {
-    animation: ink 0.7s ease-out both;
-    animation-delay: var(--d);
-  }
-
-  @keyframes ink {
-    from {
-      opacity: 0;
-      filter: blur(6px);
-    }
+    color: var(--acc);
   }
 
   /* 间奏：一个淡淡的小圆点 */

@@ -1,8 +1,9 @@
 ---
 // 全站布局：字体、全局样式、页面切换、页眉页脚、全局播放器
 import { ClientRouter } from 'astro:transitions';
-import '@fontsource/noto-serif-sc/300.css';
-import '@fontsource/noto-serif-sc/400.css';
+// 中文：霞鹜文楷（细 300 / 常规 400），按字切片自托管，浏览器只下载用到的字
+import 'lxgw-wenkai-webfont/lxgwwenkai-light.css';
+import 'lxgw-wenkai-webfont/lxgwwenkai-regular.css';
 import '@fontsource/cormorant-garamond/400.css';
 import '@fontsource/cormorant-garamond/400-italic.css';
 import '@fontsource/cormorant-garamond/500.css';

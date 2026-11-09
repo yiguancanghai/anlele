@@ -2,7 +2,6 @@
 //   - 同步歌词：歌的 md 旁边放一个同名 .lrc 文件，如 sounds/zh/yeben.lrc（英文歌词或英译放 sounds/en/）
 //   - 歌词纯文本：写在 md 正文里的 ```lyrics 代码块中（打轴工具读它；页面上不当作创作说明显示）
 import type { Lang } from '../i18n/ui';
-import { tokenize } from './poem';
 
 export interface LyricLine {
   t: number; // 这一句开始的时间（秒）
@@ -42,14 +41,4 @@ export function getLyrics(id: string, lang: Lang): LyricLine[] | undefined {
 // md 正文里 ```lyrics 代码块的内容（歌词纯文本）
 export function lyricsBlock(body: string): string | undefined {
   return body.match(/```lyrics\n([\s\S]*?)\n```/)?.[1];
-}
-
-// 单曲页上当前句逐字出现：整句在约 0.6–1 秒内出现完（句子之间间隔短时更快）
-export function lineTokens(text: string, gap: number) {
-  const parts = tokenize(text);
-  const count = parts.filter((p) => !/^\s+$/.test(p)).length || 1;
-  const span = Math.min(1000, Math.max(600, gap * 1000 * 0.5));
-  const step = span / count;
-  let i = 0;
-  return parts.map((p) => (/^\s+$/.test(p) ? { text: p } : { text: p, delay: Math.round(step * i++) }));
 }

@@ -227,7 +227,7 @@ button {
 }
 
 /* 英文界面（以及中文页面里的英文内容）：用 Cormorant Garamond 正体，并放大到和中文相近的视觉大小
-   英文页面里的中文内容（带 lang="zh-CN"）仍用 Noto Serif SC */
+   英文页面里的中文内容（带 lang="zh-CN"）仍用中文字体（霞鹜文楷） */
 :root[lang='en'] body,
 :root[lang='zh-CN'] [lang='en'] {
   font-family: var(--font-latin);
