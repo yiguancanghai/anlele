@@ -6,7 +6,7 @@
 import Base from '../layouts/Base.astro';
 import Only from '../components/Only.astro';
 import { getWorks, type Work } from '../i18n/content';
-import { getLang, htmlLang, localize, useT, type Lang } from '../i18n/ui';
+import { getLang, htmlLang, localize, switchPath, useT, type Lang } from '../i18n/ui';
 import { getLyrics, lyricsBlock } from '../scripts/lyrics';
 import { formatTime } from '../scripts/text';
 
@@ -40,7 +40,13 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
 
 ---
 
-<Base title={data.title} description={data.note}>
+<!-- 这首歌只有一种语言时：另一种语言的页面以原文页为准，也不声明两个版本，免得被当成重复内容 -->
+<Base
+  title={data.title}
+  description={data.note}
+  canonicalPath={work.missing ? switchPath(Astro.url.pathname, work.contentLang) : undefined}
+  alternates={work.hasZh && work.hasEn}
+>
   <article class="wrap song" data-song={id}>
     <div class="tools">
       <a href={localize('/sounds/', lang)}>{t('sounds.back')}</a>

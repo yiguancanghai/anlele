@@ -18,14 +18,17 @@ import { getLang, htmlLang, localize, switchPath, useT } from '../i18n/ui';
 interface Props {
   title?: string; // 板块名，留空则只显示站名
   description?: string;
+  canonicalPath?: string; // 以哪个地址为准（默认就是本页）；英文页其实是中文原文时指向中文页
+  alternates?: boolean; // 是否声明中英两个版本（作品只有一种语言时关掉）
+  noindex?: boolean; // 不让搜索引擎收录（404 页）
 }
 
 const lang = getLang(Astro.currentLocale);
 const t = useT(lang);
-const { title, description = t('site.description') } = Astro.props;
+const { title, description = t('site.description'), canonicalPath, alternates = true, noindex = false } = Astro.props;
 const fullTitle = title ? `${title} · anlele` : 'anlele';
 const path = Astro.url.pathname;
-const canonical = new URL(path, Astro.site);
+const canonical = new URL(canonicalPath ?? path, Astro.site);
 // 两种语言互相指向，供搜索引擎识别
 const zhUrl = new URL(switchPath(path, 'zh'), Astro.site);
 const enUrl = new URL(switchPath(path, 'en'), Astro.site);
@@ -38,10 +41,17 @@ const enUrl = new URL(switchPath(path, 'en'), Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="zh-CN" href={zhUrl} />
-    <link rel="alternate" hreflang="en" href={enUrl} />
-    <link rel="alternate" hreflang="x-default" href={zhUrl} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && <link rel="canonical" href={canonical} />}
+    {
+      !noindex && alternates && (
+        <>
+          <link rel="alternate" hreflang="zh-CN" href={zhUrl} />
+          <link rel="alternate" hreflang="en" href={enUrl} />
+          <link rel="alternate" hreflang="x-default" href={zhUrl} />
+        </>
+      )
+    }
     <meta property="og:site_name" content="anlele" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'zh_CN'} />

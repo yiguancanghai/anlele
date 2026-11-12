@@ -5,7 +5,7 @@ import Base from '../layouts/Base.astro';
 import Only from '../components/Only.astro';
 import PoemReader from '../components/PoemReader.astro';
 import type { Work } from '../i18n/content';
-import { getLang, htmlLang, localize, useT } from '../i18n/ui';
+import { getLang, htmlLang, localize, switchPath, useT } from '../i18n/ui';
 import { firstLine } from '../scripts/text';
 
 interface Props {
@@ -22,7 +22,13 @@ const year = date.getFullYear();
 const textLang = work.contentLang === lang ? undefined : htmlLang(work.contentLang);
 ---
 
-<Base title={title} description={excerpt ?? firstLine(work.body)}>
+<!-- 这件作品只有一种语言时：另一种语言的页面以原文页为准，也不声明两个版本，免得被当成重复内容 -->
+<Base
+  title={title}
+  description={excerpt ?? firstLine(work.body)}
+  canonicalPath={work.missing ? switchPath(Astro.url.pathname, work.contentLang) : undefined}
+  alternates={work.hasZh && work.hasEn}
+>
   <article class={`wrap piece${kind === '诗' ? ' is-poem' : ''}`}>
     {
       kind !== '诗' && (

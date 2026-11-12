@@ -1,0 +1,5 @@
+# 欢迎所有搜索引擎和爬虫
+User-agent: *
+Allow: /
+
+Sitemap: https://anlele.org/sitemap-index.xml

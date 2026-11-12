@@ -1,0 +1,37 @@
+---
+// 404：地址不存在时显示（中英各一份，不让搜索引擎收录）
+import Base from '../layouts/Base.astro';
+import { getLang, localize, useT } from '../i18n/ui';
+
+const lang = getLang(Astro.currentLocale);
+const t = useT(lang);
+---
+
+<Base title={t('notFound.title')} noindex>
+  <section class="wrap section">
+    <h1 class="section-title rise">404</h1>
+    <p class="text rise" style="--i: 1">{t('notFound.text')}</p>
+    <p class="rise" style="--i: 2"><a href={localize('/', lang)}>{t('notFound.home')}</a></p>
+  </section>
+</Base>
+
+<style>
+  .text {
+    max-width: 560px;
+    margin-top: 56px;
+    line-height: 2.1;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 24px;
+    font-size: 14px;
+    color: var(--mute);
+  }
+
+  a:hover {
+    color: var(--acc);
+  }
+</style>
