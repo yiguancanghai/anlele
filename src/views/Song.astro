@@ -1,6 +1,6 @@
 ---
 // 单曲页：歌名、说明、播放按钮 / 歌词（跟着歌走）/ 创作说明（中英共用）
-//   有同名 .lrc：歌词随播放高亮，自动滚动，点任意一句跳到那里播放
+//   有同名 .lrc：歌词像片尾字幕一样跟着歌持续上滚，唱到的那句变橙，点任意一句跳到那里播放
 //   没有 .lrc 但正文里有 ```lyrics 代码块：静态显示歌词
 //   都没有（纯音乐）：只显示创作说明
 import Base from '../layouts/Base.astro';
@@ -70,11 +70,11 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
         <div class="lyrics synced rise" style="--i: 1" data-lyrics lang={tag(lyricsLang!)} aria-label={t('sounds.lyrics')} role="group">
           {lines.map((l, i) =>
             l.text ? (
-              <button type="button" class="line" data-i={i} data-t={l.t}>
+              <button type="button" class="line" data-i={i} data-t={l.t} data-at={l.t}>
                 {l.text}
               </button>
             ) : (
-              <span class="gap" data-i={i} aria-hidden="true" />
+              <span class="gap" data-i={i} data-at={l.t} aria-hidden="true" />
             ),
           )}
         </div>
@@ -130,13 +130,45 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
   import type { LyricState } from '../scripts/player';
 
   let pauseUntil = 0; // 用户手动滚动后，暂停自动滚动到这个时间
-  let resume: ReturnType<typeof setTimeout> | undefined;
-  let last: LyricState | undefined; // 最近一次的歌词状态，恢复自动滚动时用
+  let raf = 0;
+  let pos = NaN; // 自己记的滚动位置（带小数）。直接对 scrollTop 做小幅增减会被浏览器取整吞掉，动起来一顿一顿的
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const center = (el: HTMLElement) => el.offsetTop + el.offsetHeight / 2;
+
+  // 歌词持续上滚：每一帧按播放时间，在"这一句"和"下一句"之间按比例取位置，
+  // 让歌词像片尾字幕一样匀速往上走；一句唱得越久，走得越慢。滚动值缓缓追上目标，所以跳转后也是平滑过去的
+  function drift() {
+    const p = window.anlelePlayer;
+    const song = document.querySelector<HTMLElement>('[data-song]');
+    const box = song?.querySelector<HTMLElement>('[data-lyrics]');
+    if (!p || !song || !box || !p.playing || p.id !== song.dataset.song) {
+      raf = 0;
+      pos = NaN;
+      return;
+    }
+    const items = [...box.querySelectorAll<HTMLElement>('[data-at]')];
+    let i = -1;
+    items.forEach((el, k) => {
+      if (Number(el.dataset.at) <= p.time) i = k;
+    });
+    let y = center(items[Math.max(0, i)]); // 第一句之前（前奏）停在第一句
+    if (i >= 0 && i < items.length - 1) {
+      const a = Number(items[i].dataset.at);
+      const b = Number(items[i + 1].dataset.at);
+      y += (center(items[i + 1]) - y) * Math.min(1, (p.time - a) / (b - a));
+    }
+    const target = y - box.clientHeight * 0.4; // 唱到的那句在歌词区偏上 40% 的位置
+    if (Date.now() <= pauseUntil || Number.isNaN(pos)) {
+      pos = box.scrollTop; // 用户正在手动滚动（或刚开始）：从当前位置接着跟
+    } else {
+      pos += (target - pos) * 0.12;
+      box.scrollTop = pos;
+    }
+    raf = requestAnimationFrame(drift);
+  }
 
   // 根据播放器的歌词状态，标出唱过的 / 正在唱的 / 还没唱的
   function update(state: LyricState) {
-    last = state;
     const song = document.querySelector<HTMLElement>('[data-song]');
     const box = song?.querySelector<HTMLElement>('[data-lyrics]');
     if (!song || !box) return;
@@ -150,10 +182,12 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
       el.classList.toggle('next', active && i > state.index);
       if (active && i === state.index) now = el;
     });
-    // 当前句保持在歌词区偏上约 40% 的位置
-    if (now && Date.now() > pauseUntil) {
-      const top = now.offsetTop - box.clientHeight * 0.4 + now.offsetHeight / 2;
-      box.scrollTo({ top, behavior: reduced() ? 'auto' : 'smooth' });
+    if (!active) return;
+    if (reduced()) {
+      // 减少动态效果：不持续滚动，换句时直接跳到那一句
+      if (now && Date.now() > pauseUntil) box.scrollTop = center(now) - box.clientHeight * 0.4;
+    } else if (!raf) {
+      raf = requestAnimationFrame(drift);
     }
   }
 
@@ -170,12 +204,8 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
   function init() {
     const box = document.querySelector<HTMLElement>('[data-lyrics]');
     if (!box) return;
-    // 手动滚动后暂停自动滚动约 4 秒
-    const hold = () => {
-      pauseUntil = Date.now() + 4000;
-      clearTimeout(resume);
-      resume = setTimeout(() => last && update(last), 4000); // 4 秒后滚回当前句
-    };
+    // 手动滚动后暂停自动滚动约 4 秒，之后再平滑地回到跟随
+    const hold = () => (pauseUntil = Date.now() + 4000);
     box.addEventListener('wheel', hold, { passive: true });
     box.addEventListener('touchmove', hold, { passive: true });
     document.dispatchEvent(new CustomEvent('player:ask')); // 打开页面时先同步一次
@@ -260,6 +290,7 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
 
   /* 同步歌词：一个可以滚动的区域，上下留白让第一句和最后一句也能停在偏上 40% 处 */
   .synced {
+    position: relative; /* 让每句的 offsetTop 以歌词区为准 */
     height: min(60svh, 560px);
     overflow-y: auto;
     padding: 22svh 0 36svh;
@@ -354,14 +385,16 @@ const poem = data.related ? (await getWorks('words', lang)).find((w) => w.id ===
     color: var(--ink);
   }
 
-  .facts a {
-    display: inline-flex;
+  /* 左边的"工具"和右边的内容放在同样高的行里，都垂直居中，才对得齐 */
+  .facts dt,
+  .facts dd {
+    display: flex;
     align-items: center;
     min-height: 44px;
   }
 
-  .facts dt {
-    display: flex;
+  .facts a {
+    display: inline-flex;
     align-items: center;
     min-height: 44px;
   }

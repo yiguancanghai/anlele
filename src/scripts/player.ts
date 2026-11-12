@@ -198,6 +198,19 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('player:toggle', (e) => toggle((e as CustomEvent<string | undefined>).detail));
+// 给页面每一帧读当前状态用（单曲页的歌词持续上滚）
+window.anlelePlayer = {
+  get id() {
+    return current?.id;
+  },
+  get time() {
+    return audio.currentTime;
+  },
+  get playing() {
+    return !audio.paused;
+  },
+};
+
 // 页面（比如刚打开的单曲页）可以主动要一次当前歌词状态
 document.addEventListener('player:ask', emitLyric);
 document.addEventListener('player:seek', (e) => {
