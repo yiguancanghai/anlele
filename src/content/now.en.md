@@ -1,5 +1,5 @@
-Writing a song
+Reflecting on a signature I wrote n years ago (perfectly harmless)
 
-Listening: the wind howling outside the window
+Listening to the songs I wrote with AI
 
 One small thing today: I went down to the lake and sat for a while

@@ -5,11 +5,11 @@ import type { Lang } from '../i18n/ui';
 // 正文据萨福残篇 104a 的大意
 export const epigraph: Record<Lang, { lines: string[]; source: string }> = {
   zh: {
-    lines: ['黄昏，', '你把明亮的清晨所散开的一切都带回来，', '带回羊，带回山羊，', '把孩子带回母亲身边。'],
+    lines: ['黄昏，', '你把明亮的清晨所散开的一切都带回来，', '带回山羊，', '把孩子带回母亲身边。'],
     source: '你是黄昏的牧人',
   },
   en: {
-    lines: ['Evening,', 'you bring back everything the bright dawn scattered,', 'bring back the sheep, bring back the goat,', 'bring the child back to its mother.'],
+    lines: ['Evening,', 'you bring back everything the bright dawn scattered,', 'bring back the goat,', 'bring the child back to its mother.'],
     source: 'You Are the Shepherd of Evening',
   },
 };
